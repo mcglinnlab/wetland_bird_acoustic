@@ -20,12 +20,10 @@ dat$names <- make_sp_codes(dat$Common.name)
 
 dat$site_time <- paste(dat$site_id, dat$date_time, sep ='_')
 
-
 hab <- ifelse(grepl('U', dat$site_id), 'upland', 'wetland')
 dat <- cbind(dat, hab)
 #within 5 min interval, on avg seeing 5 species in upland and 3/4 in wetland with a
 #lot of outliers.
-
 
 # subset any confidence less than 0.5
 dat_sub <- subset(dat, Confidence > 0.5)
@@ -35,9 +33,17 @@ dat_sub$date_time <- as.POSIXlt(dat_sub$date_time, tz = 'EST',
 dat_sub$start_time <-  as.POSIXlt(dat_sub$start_time, tz = 'EST',
                                   format = "%m/%d/%Y %H:%M")
 
-# fix times on a few sites where clock was wrong
+# fix times of a few sites where clock was wrong
 # HH01 needs 4 hours subtracted
 dat_sub$start_time[dat_sub$site_id == "HH01"] <- dat_sub$start_time[dat_sub$site_id == "HH01"] - 4*60*60
+# HH02 needs ? hours subtracted
+dat_sub$start_time[dat_sub$site_id == "HH02"] <- dat_sub$start_time[dat_sub$site_id == "HH02"] - 4*60*60
+# HH04 needs ? hours subtracted
+dat_sub$start_time[dat_sub$site_id == "HH04"] <- dat_sub$start_time[dat_sub$site_id == "HH04"] - 4*60*60
+# HH05 needs ? hours subtracted
+dat_sub$start_time[dat_sub$site_id == "HH05"] <- dat_sub$start_time[dat_sub$site_id == "HH05"] - 4*60*60
+# SP02 needs ? hours subtracted
+dat_sub$start_time[dat_sub$site_id == "SP02"] <- dat_sub$start_time[dat_sub$site_id == "SP02"] - 4*60*60
 # SP09 needs 4 hours subtracted
 dat_sub$start_time[dat_sub$site_id == "SP09"] <- dat_sub$start_time[dat_sub$site_id == "SP09"] - 4*60*60
 
@@ -47,7 +53,7 @@ dawn_times <- as.POSIXlt(paste(dat_sub$date, "6:00"), tz = 'EST',
 # survey end time
 end_times <- as.POSIXlt(paste(dat_sub$date, "9:00"), tz = 'EST',
                         format = "%m/%d/%Y %H:%M")
-# subset dat_sub to dawn chorus times
+# subset dat_sub to dawn chorus times 
 dat_sub <- dat_sub[dat_sub$start_time > dawn_times & dat_sub$start_time < end_times, ]
 
 # now adjust start times so that they are in 5 min intervals
@@ -66,6 +72,13 @@ comm <- ifelse(is.na(comm), 0, comm)
 sum(comm)
 
 comm[, 1:5]
+
+wetland_id <- sapply(strsplit(row.names(comm), split = '_', fixed = TRUE), function(x) x[1])
+comm <- aggregate(comm, by = list(wetland_id), function(x) sum(x) / length(x))
+names(comm)
+#rename group 1 to wetland_id
+names(comm) = c("wetland_id", names(comm) [-1])
+
 # convert to data.frame
 comm <- as.data.frame(comm)
 
@@ -73,7 +86,6 @@ comm$CHNA
 
 #Chuck-will's widow - NIGHTIME
 write.csv(row.names(comm[comm$CHNA > 1,]), file = './data/CHNA_detections.csv')
-
 
 N <- rowSums(comm)
 S <- rowSums(comm > 0)
@@ -88,8 +100,6 @@ hist(rowSums(comm > 0), xlab= "# of Observations within 5 min interval",
 
 #subsample out in equal amounts of upland and wetlands or statistically model for
 #the temporal and spatial autocorrelation. pseudo-replication.
-
-names(comm)
 
 # look at species ranks based upon number of occurrences
 sort(colSums(comm > 0), dec = T)
@@ -128,18 +138,17 @@ dat_pc <- read.csv('https://raw.githubusercontent.com/mcglinnlab/wetland_birds/m
 # site_id; therefore let's rename wetland_id to site_id for simplicity
 #jackson's data is subset from 0y-25 m rather than previous total which was 50m.
 head(dat_pc)
-comm_pc <- dat_pc[ , c('wetland_id', 'date.x', names(dat_pc)[12:66])]
+comm_pc <- dat_pc[ , c('wetland_id', names(dat_pc)[12:66])]
 comm_pc[1:5, 1:5]
-sr_pc <- rowSums(comm_pc[ , -(1:2)] > 0)
+sr_pc <- rowSums(comm_pc[ , -(1)] > 0)
 plot(density(sr_pc))
 
 sr_avg <- tapply(sr_pc, comm_pc$wetland, mean)
 sr_avg
 plot(sr_avg)
 
-
 #transform into data frame
-comm_ptct <- as.data.frame(comm_ptct)
+comm_ptct <- as.data.frame(comm_pc)
 
 sr_avg_df <- data.frame(wetland_id = names(sr_avg), S = sr_avg)
 sr_site_id_df <- data.frame(wetland_id = names(sr_site_id), S = sr_site_id)
@@ -149,26 +158,41 @@ sr_merge <- merge(sr_avg_df, sr_site_id_df, by = 'wetland_id', all = TRUE)
 plot(S.y ~ S.x, data = sr_merge)
 abline(a = 0 , b=1)
 
+#compress point counts and acoustic into a single value per sample, tapply or aggregate
+#merge & get 2 NOCA's- one for PC & one for acoustic
+comm_ptct <- aggregate(comm_ptct, by = list(comm_ptct$wetland_id), function(x) sum(x > 0) / length(x))
+# drop wetland id and rename group 1 to wetland id
+names(comm_ptct)
+comm_ptct = subset(comm_ptct, select = -wetland_id)
+names(comm_ptct)= c("wetland_id", names(comm_ptct) [-1])
+names(comm_ptct)
+## wetland id pivots wrong.
+
+#pivot data frame to long format
+library(tidyr)
+pivot_longer(comm, cols = !wetland_id)
+pivot_longer(comm_ptct, cols = !wetland_id)
+
 #add column to dataframes indicating methods
 comm_ptct %>% mutate(method = "ptct")
 comm %>% mutate(method = "acoustic")
 
-#merge community matrixes
-comm_both <- merge(comm, comm_ptct, by = [1, ] all = TRUE)
+#merge community matrices
+comm_both <- merge(comm, comm_ptct, by = comm$wetland_id, all = TRUE) # methods not merging !
+
 sr_both <- rowSums(comm_both > 0)
-#subset time column to get the dawn chorus comparisons between my data & jackson's.
+sr_both_avg <- tapply(sr_both, comm_both$wetland, mean)
+length(sr_both)
+length(comm_both)
+plot(sr_both_avg)
 
-#NEED A PLOT THAT SHOWS DIFF BETWEEN ACOUSTIC SR & POINT COUNT
+boxplot(comm_both$GRCR ~ comm_both$method)
 
-boxplot(comm_both$CHNA ~ comm_both$method)
-
-#Then redefine 10 min time units and split into 2. Every start time go 5, and that
-#becomes unit.
-
-
-
+#NEED A PLOT THAT SHOWS DIFF BETWEEN ACOUSTIC SR & POINT COUNT SR
 # diversity accumulation; point counts miss rare things that come through (rare tail)
 # separate analysis pathway. 
 
+#build occupancy matrix for both mine and jackson's species
+#proceed as if we dropped the wonky guys 
 
-
+#examine the redundancy vs complementary info in acoustic methods.
