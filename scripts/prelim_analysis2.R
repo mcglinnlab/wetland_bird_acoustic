@@ -66,15 +66,19 @@ for (i in 1:nrow(dat_sub)) {
 # make unique id that has site_id and date_time
 dat_sub$site_date <- with(dat_sub, paste(site_id, date_time, sep = '_'))
 
+# make confidence matrix - take the max confidence across all observations in that
+# site at that date
 comm <- with(dat_sub, tapply(Confidence, list(site_date, names),
-                        function(x) length(x)))
+                             function(x) any(x > 0) * 1))
 comm <- ifelse(is.na(comm), 0, comm)
 sum(comm)
 
-comm[, 1:5]
+comm[1:5, 1:5]
 
 wetland_id <- sapply(strsplit(row.names(comm), split = '_', fixed = TRUE), function(x) x[1])
 comm <- aggregate(comm, by = list(wetland_id), function(x) sum(x) / length(x))
+comm[1:5, 1:5]
+summary(comm)
 names(comm)
 #rename group 1 to wetland_id
 names(comm) = c("wetland_id", names(comm) [-1])
@@ -91,7 +95,7 @@ N <- rowSums(comm)
 S <- rowSums(comm > 0)
 comm[N == 83, ]
 cbind(unique(dat$Common.name), make_sp_codes(unique(dat$Common.name)))
- 
+
 plot(density(S))
 
 # distribution of species richness
@@ -170,15 +174,54 @@ names(comm_ptct)
 
 #pivot data frame to long format
 library(tidyr)
-pivot_longer(comm, cols = !wetland_id)
-pivot_longer(comm_ptct, cols = !wetland_id)
+comm <- pivot_longer(comm, cols = !wetland_id)
+comm_ptct <- pivot_longer(comm_ptct, cols = !wetland_id)
 
 #add column to dataframes indicating methods
-comm_ptct %>% mutate(method = "ptct")
-comm %>% mutate(method = "acoustic")
+comm_ptct$method <- "ptct"
+comm$method <- "acoustic"
 
-#merge community matrices
-comm_both <- merge(comm, comm_ptct, by = comm$wetland_id, all = TRUE) # methods not merging !
+#row append community matrices
+comm_both <- rbind(comm, comm_ptct)
+
+# drop sites not found in both sampling methods 
+acoustic_sites <- unique(comm_both$wetland_id[comm_both$method == 'acoustic'])
+sites_with_both <- acoustic_sites[acoustic_sites %in% unique(comm_both$wetland_id[comm_both$method == 'ptct'])]
+sites_with_both
+
+comm_both <- subset(comm_both, wetland_id %in% sites_with_both)
+
+sp_occ <- pivot_wider(comm_both, names_from = 'method', values_from = value)
+sp_occ$acoustic <- ifelse(is.na(sp_occ$acoustic), 0, sp_occ$acoustic)
+sp_occ$ptct <- ifelse(is.na(sp_occ$ptct), 0, sp_occ$ptct)
+
+
+plot(acoustic ~ ptct, data = sp_occ, type = 'n')
+with(sp_occ, text(ptct, acoustic, labels = name, cex = 0.5))
+abline(a = 0 , b= 1)
+
+sp_occ_agg <- sp_occ %>% 
+    group_by(name) %>% 
+    summarize(acoustic = mean(acoustic), ptct = mean(ptct))
+
+
+plot(acoustic ~ ptct, data = sp_occ_agg, type = 'n')
+with(sp_occ_agg, text(ptct, acoustic, labels = name, cex = 0.5))
+abline(a = 0 , b= 1)
+
+S_acou <- with(sp_occ, tapply(acoustic, list(wetland_id), sum))
+S_ptct <- with(sp_occ, tapply(ptct, list(wetland_id), sum))
+
+V_acou <- with(sp_occ, tapply(acoustic, list(wetland_id), 
+                              function(x) sum(x * (1 - x))))
+V_ptct <- with(sp_occ, tapply(ptct, list(wetland_id),
+                              function(x) sum(x * (1 - x))))
+
+par(mfrow=c(1,2))
+plot(S_ptct, S_acou)
+abline(a = 0, b=1)
+plot(V_ptct, V_acou)
+abline(a = 0, b=1)
 
 sr_both <- rowSums(comm_both > 0)
 sr_both_avg <- tapply(sr_both, comm_both$wetland, mean)
