@@ -3,100 +3,10 @@ library(readr)
 library(dplyr)
 library(easyCODA)
 
-make_sp_codes <- function(x) {
-    sp_genus <- toupper(substring(x, 1, 2))
-    sp_sp    <- toupper(sapply(strsplit(x, ' ', fixed = TRUE),
-                               function(x)substring(x[2], 1, 2)))
-    sp_code <- paste(sp_genus, sp_sp, sep='')
-    sp_code
-}
-
-# read in data and reformat -----------
-dat <- read.csv('./data/compiled_bird_audio_survey_new1.csv')
-#use this once formatting has been updated.
-dat <- read.csv('./data/compiled_bird_audio_survey_master.csv')
-
-dat$names <- make_sp_codes(dat$Common.name)
-
-dat$site_time <- paste(dat$site_id, dat$date_time, sep ='_')
-
-hab <- ifelse(grepl('U', dat$site_id), 'upland', 'wetland')
-dat <- cbind(dat, hab)
-#within 5 min interval, on avg seeing 5 species in upland and 3/4 in wetland with a
-#lot of outliers.
-
-# subset any confidence less than 0.5
-dat_sub <- subset(dat, Confidence > 0.5)
-
-dat_sub$date_time <- as.POSIXlt(dat_sub$date_time, tz = 'EST',
-                                format = "%m/%d/%Y %H:%M")
-dat_sub$start_time <-  as.POSIXlt(dat_sub$start_time, tz = 'EST',
-                                  format = "%m/%d/%Y %H:%M")
-
-# fix times of a few sites where clock was wrong
-# HH01 needs 4 hours subtracted
-dat_sub$start_time[dat_sub$site_id == "HH01"] <- dat_sub$start_time[dat_sub$site_id == "HH01"] - 4*60*60
-# HH02 needs ? hours subtracted
-dat_sub$start_time[dat_sub$site_id == "HH02"] <- dat_sub$start_time[dat_sub$site_id == "HH02"] - 4*60*60
-# HH04 needs ? hours subtracted
-dat_sub$start_time[dat_sub$site_id == "HH04"] <- dat_sub$start_time[dat_sub$site_id == "HH04"] - 4*60*60
-# HH05 needs ? hours subtracted
-dat_sub$start_time[dat_sub$site_id == "HH05"] <- dat_sub$start_time[dat_sub$site_id == "HH05"] - 4*60*60
-# SP02 needs ? hours subtracted
-dat_sub$start_time[dat_sub$site_id == "SP02"] <- dat_sub$start_time[dat_sub$site_id == "SP02"] - 4*60*60
-# SP09 needs 4 hours subtracted
-dat_sub$start_time[dat_sub$site_id == "SP09"] <- dat_sub$start_time[dat_sub$site_id == "SP09"] - 4*60*60
-
-# sunup
-dawn_times <- as.POSIXlt(paste(dat_sub$date, "6:00"), tz = 'EST',
-                         format = "%m/%d/%Y %H:%M")
-# survey end time
-end_times <- as.POSIXlt(paste(dat_sub$date, "9:00"), tz = 'EST',
-                        format = "%m/%d/%Y %H:%M")
-# subset dat_sub to dawn chorus times 
-dat_sub <- dat_sub[dat_sub$start_time > dawn_times & dat_sub$start_time < end_times, ]
-
-# now adjust start times so that they are in 5 min intervals
-for (i in 1:nrow(dat_sub)) {
-    if ((dat_sub$start_time[i]  - dat_sub$date_time[i]) > 4) {
-        dat_sub$date_time[i] <- dat_sub$date_time[i] + 5*60
-    }
-}
-
-# make unique id that has site_id and date_time
-dat_sub$site_date <- with(dat_sub, paste(site_id, date_time, sep = '_'))
-
-# make confidence matrix - take the max confidence across all observations in that
-# site at that date
-comm <- with(dat_sub, tapply(Confidence, list(site_date, names),
-                             function(x) any(x > 0) * 1))
-comm <- ifelse(is.na(comm), 0, comm)
-sum(comm)
-
-comm[1:5, 1:5]
-
-wetland_id <- sapply(strsplit(row.names(comm), split = '_', fixed = TRUE), function(x) x[1])
-comm <- aggregate(comm, by = list(wetland_id), function(x) sum(x) / length(x))
-comm[1:5, 1:5]
-summary(comm)
-names(comm)
-#rename group 1 to wetland_id
-names(comm) = c("wetland_id", names(comm) [-1])
-
-# convert to data.frame
-comm <- as.data.frame(comm)
-
 comm$CHNA
 
 #Chuck-will's widow - NIGHTIME
 write.csv(row.names(comm[comm$CHNA > 1,]), file = './data/CHNA_detections.csv')
-
-N <- rowSums(comm)
-S <- rowSums(comm > 0)
-comm[N == 83, ]
-cbind(unique(dat$Common.name), make_sp_codes(unique(dat$Common.name)))
-
-plot(density(S))
 
 # distribution of species richness
 hist(rowSums(comm > 0), xlab= "# of Observations within 5 min interval",
@@ -109,10 +19,9 @@ hist(rowSums(comm > 0), xlab= "# of Observations within 5 min interval",
 sort(colSums(comm > 0), dec = T)
 
 row.names(comm)
-site_id <- sapply(strsplit(row.names(comm), '_'), function(x) x[1])
-date_time <- sapply(strsplit(row.names(comm), '_'), function(x) x[2])
-habitat <- ifelse(substring(site_id, 1, 1) == 'U', 'upland', 'wetland')
-property_wet <- ifelse(substring(site_id, 1, 1) == 'H', 'Halidon', 'Stono')
+habitat <- ifelse(substring(comm$wetland_id, 1, 1) == 'U', 'upland', 'wetland')
+#need to assign Halidon vs stono if we care to compare
+#property <- ifelse(substring(site_id, 1, 1) == 'H', 'Halidon', 'Stono')
 
 table(habitat)
 
@@ -229,7 +138,22 @@ length(sr_both)
 length(comm_both)
 plot(sr_both_avg)
 
-boxplot(comm_both$GRCR ~ comm_both$method)
+boxplot(comm_both$value~ comm_both$method)
+
+upland <- comm_both$wetland_id
+boxplot(comm_both$value ~ comm_both$wetland_id)
+
+comm_both$habitat <- ifelse(substring(comm_both$wetland_id, 1, 1) == 'U', 'upland', 'wetland')
+
+boxplot(comm_both$value ~ comm_both$habitat)
+
+#next: Dig into details & see what, why, where. Test upland vs wetlands to see diff
+#between habitat type - open vs veg, vary depending on ptct radius or conf level.
+#study scale shows that methods are slightly redundant but for most part they are
+#detecting diff community comp. 
+#(Should we remove all species but songbirds? One more layer of processing & see if 
+#that corrects the axes).
+#which species did Jackson miss that I picked up? Go back & validate by listening.
 
 #NEED A PLOT THAT SHOWS DIFF BETWEEN ACOUSTIC SR & POINT COUNT SR
 # diversity accumulation; point counts miss rare things that come through (rare tail)
