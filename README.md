@@ -2,7 +2,7 @@
 
 Welcome to the project repository for my master's thesis: What can the soundscape of ephemeral wetlands tell us about the drivers of songbird community composition and diversity?
 
-The objective of this project is to collect acoustic samples of ephemeral wetlands in the lowcountry of South Carolina and compare community composition to the results produced by traditional point count methods. 
+The objective of this project is to collect acoustic samples of songbirds around ephemeral wetlands in the Lowcountry of South Carolina and compare community composition results to the results produced by traditional point count methods. 
 
 Background/Question/Methods
 
