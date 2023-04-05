@@ -1,0 +1,9 @@
+﻿Variables,Description
+site_id,"The site identifiers: Halidon Hill (HH), Stono Preserve (SP), and uplands (UP)."
+date_time,The date of sample and start time of 10 minute recording
+date,The date of sample and start time of 10 minute recording
+start_time,The time within the recording when the bird call was detected by BirdNET
+end_time,The time within the recording when the bird call that was detected by BirdNET ends
+Scientific.name,The scientific name of the bird detected by BirdNET
+Common.name,The common name of the bird detected by BirdNET
+Confidence,The confidence interval of the bird detected by BirdNET

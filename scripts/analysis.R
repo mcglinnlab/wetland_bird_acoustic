@@ -59,5 +59,7 @@ summary(aov(srlog~habitat))
 #convert data into 5 min intervals. Add veg data and area/perimeters.
 #Canopy cover variables showed signal in jackson's results. Distance from nearest
 #tree and wet area.
+#join community matrix data and then ask dan for help with 5 min change.
+
 
 #sr avg to occurence stat
