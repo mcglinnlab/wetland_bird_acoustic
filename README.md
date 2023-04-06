@@ -10,7 +10,7 @@ Wetlands provide essential ecosystem services and natural habitats for many orga
 
 Project Structure
 
-The structure of this code-base is R. My code can be found in the scripts folder, and the workflow is ordered from data processing to preliminary analysis to analysis. The csv import script is only used for consolidating multiple csv files into one main file. Relevant figures can be found in the figs folder, and the data can be accessed after requesting it from me. The data contains the site id, sample date & time, start time of occurrence, end time of occurrence, scientific & common name of bird species, and confidence of identification. The metadata can be found in the data folder and contains descriptions of data columns.
+The structure of this code-base is R. My code can be found in the scripts folder, and the workflow is ordered from data processing to preliminary analysis to analysis. The csv import script is only used for consolidating multiple csv files into one main file. Relevant figures can be found in the figs folder, and the data can be accessed from the data folder. The data contains the site id, sample date & time, start time of occurrence, end time of occurrence, scientific & common name of bird species, and confidence of identification. The metadata can be found in the data folder and contains descriptions of data columns.
 
 My results can be replicated by using various plot and boxplot functions included in the analysis code to illustrate the relationship between different variables. I typically use linear models with the transformed data.
 
