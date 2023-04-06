@@ -1,15 +1,15 @@
-## wetland_bird_acoustic
+# wetland_bird_acoustic
 
 Welcome to the project repository for my master's thesis: What can the
 soundscape of ephemeral wetlands tell us about the drivers of songbird community
 composition and diversity?
 
-# Objective
+## Objective
 The objective of this project is to collect acoustic samples of songbirds around
 ephemeral wetlands in the Lowcountry of South Carolina and compare community
 composition results to the results produced by traditional point count methods.
 
-# Background/Question/Methods
+## Background/Question/Methods
 Wetlands provide essential ecosystem services and natural habitats for many
 organisms, however, ephemeral wetlands are often overlooked because it is
 unclear if these partially wet areas are ecologically unique and important.
@@ -26,7 +26,7 @@ and 6 open-canopy longleaf pine savanna uplands for 3 days each between May 15 -
 June 15, 2022. We compare the automated species detections to traditional
 point-count surveys to inform future monitoring schemes.
 
-# Project Structure
+## Project Structure
 
 The structure of this code-base is R. To access and understand the relevant data,
 download the following files:
@@ -43,7 +43,7 @@ My results can be replicated by using the various plot functions
 included in the analysis code to illustrate the relationship between different
 variables. I utilize linear models with assumed normality.
 
-# Acknowledgements
+## Acknowledgements
 
 I would like to thank Dr. Dan McGlinn for being the best advisor I could ask for
 and for his inspiring curiosity towards ecological questions and processes. I
