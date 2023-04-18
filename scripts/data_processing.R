@@ -12,8 +12,6 @@ make_sp_codes <- function(x) {
 }
 
 # read in data and reformat -----------
-dat <- read.csv('./data/compiled_bird_audio_survey_new.csv')
-#use this once formatting has been updated.
 dat <- read.csv('./data/compiled_bird_audio_survey_master.csv')
 
 dat$names <- make_sp_codes(dat$Common.name)
@@ -34,9 +32,6 @@ head(acou_code)
 
 dat <- merge(dat, acou_code, by = "Scientific.name")
 head(dat)
-
-#within 5 min interval, on avg seeing 5 species in upland and 3/4 in wetland with a
-#lot of outliers.
 
 # subset any confidence less than 0.5
 dat_sub <- subset(dat, Confidence > 0.5)
@@ -96,5 +91,6 @@ names(comm) = c("wetland_id", names(comm) [-1])
 # convert to data.frame
 comm <- as.data.frame(comm)
 
+#export data for analysis
 write.csv(comm, file = "./data/clean_data/comm.csv", row.names = FALSE)
 write.csv(dat_sub, file = "./data/clean_data/subset_data.csv", row.names = FALSE)
