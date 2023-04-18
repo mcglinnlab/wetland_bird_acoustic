@@ -49,16 +49,17 @@ dat_sub$start_time <-  as.POSIXlt(dat_sub$start_time, tz = 'EST',
 # fix times of a few sites where clock was wrong
 # HH01 needs 4 hours subtracted
 dat_sub$start_time[dat_sub$site_id == "HH01"] <- dat_sub$start_time[dat_sub$site_id == "HH01"] - 4*60*60
-# HH02 needs ? hours subtracted
+# HH02 needs 4 hours subtracted
 dat_sub$start_time[dat_sub$site_id == "HH02"] <- dat_sub$start_time[dat_sub$site_id == "HH02"] - 4*60*60
-# HH04 needs ? hours subtracted
+# HH04 needs 4 hours subtracted
 dat_sub$start_time[dat_sub$site_id == "HH04"] <- dat_sub$start_time[dat_sub$site_id == "HH04"] - 4*60*60
-# HH05 needs ? hours subtracted
+# HH05 needs 4 hours subtracted
 dat_sub$start_time[dat_sub$site_id == "HH05"] <- dat_sub$start_time[dat_sub$site_id == "HH05"] - 4*60*60
-# SP02 needs ? hours subtracted
-dat_sub$start_time[dat_sub$site_id == "SP02"] <- dat_sub$start_time[dat_sub$site_id == "SP02"] - 4*60*60
+# SP02 needs 8 hours added!
+dat_sub$start_time[dat_sub$site_id == "SP02"] <- dat_sub$start_time[dat_sub$site_id == "SP02"] + 8*60*60
 # SP09 needs 4 hours subtracted
 dat_sub$start_time[dat_sub$site_id == "SP09"] <- dat_sub$start_time[dat_sub$site_id == "SP09"] - 4*60*60
+
 
 # sunup
 dawn_times <- as.POSIXlt(paste(dat_sub$date, "6:00"), tz = 'EST',
@@ -66,6 +67,7 @@ dawn_times <- as.POSIXlt(paste(dat_sub$date, "6:00"), tz = 'EST',
 # survey end time
 end_times <- as.POSIXlt(paste(dat_sub$date, "9:00"), tz = 'EST',
                         format = "%m/%d/%Y %H:%M")
+
 # subset dat_sub to dawn chorus times 
 dat_sub <- dat_sub[dat_sub$start_time > dawn_times & dat_sub$start_time < end_times, ]
 
@@ -94,6 +96,5 @@ names(comm) = c("wetland_id", names(comm) [-1])
 # convert to data.frame
 comm <- as.data.frame(comm)
 
-
-
-
+write.csv(comm, file = "./data/clean_data/comm.csv", row.names = FALSE)
+write.csv(dat_sub, file = "./data/clean_data/subset_data.csv", row.names = FALSE)
