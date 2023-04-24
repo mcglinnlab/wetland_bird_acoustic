@@ -25,7 +25,8 @@ hist(rowSums(comm > 0), xlab= "# of Observations within 5 min interval",
 #the temporal and spatial autocorrelation. pseudo-replication.
 
 # look at species ranks based upon number of occurrences
-sort(colSums(comm > 0), dec = T)
+ac_abundance <- sort(colSums(comm > 0), dec = T)
+write.csv(ac_abundance, file = "./data/clean_data/ac_abundance.csv", row.names = TRUE)
 
 colnames(comm)
 wetland_id <- comm$wetland_id
@@ -68,6 +69,19 @@ comm_pc[1:5, 1:5]
 colnames(comm_pc)[21] <- "BACS"
 comm_pc = subset(comm_pc, select = -c(BGNN))
 comm_pc$BASP
+comm_pc$BCSP
+comm_pc$BACS = comm_pc$BACS + comm_pc$BCSP
+#drop comm_pc$BCSP
+comm_pc = subset(comm_pc, select = -c(BCSP))
+
+
+#look at species ranks based upon number of occurrences
+pc_abundance <- sort(colSums(comm_pc > 0), dec = T)
+write.csv(pc_abundance, file = "./data/clean_data/pc_abundance.csv", row.names = TRUE)
+
+#create sum ptct
+library(dplyr)
+sumcomm_ptct <- comm_pc %>% group_by(wetland_id) %>% summarise_each(funs(sum))
 
 sr_pc <- rowSums(comm_pc[ , -(1)] > 0)
 plot(density(sr_pc))
@@ -97,9 +111,6 @@ names(comm_ptct)= c("wetland_id", names(comm_ptct) [-1])
 names(comm_ptct)
 names(sumcomm) = c("wetland_id", names(sumcomm) [-1])
 
-#create sum ptct
-sumcomm_ptct <- aggregate(comm_pc, by = list(wetland_id), function(x) sum(x))
-
 #pivot data frame to long format
 library(tidyr)
 comm <- pivot_longer(comm, cols = !wetland_id)
@@ -109,6 +120,7 @@ comm_ptct <- pivot_longer(comm_ptct, cols = !wetland_id)
 comm_ptct$method <- "ptct"
 comm$method <- "acoustic"
 sumcomm$method <- "acoustic"
+sumcomm_ptct$method <- "ptct"
 
 #row append community matrices
 comm_both <- rbind(comm, comm_ptct)
@@ -118,49 +130,49 @@ acoustic_sites <- unique(comm_both$wetland_id[comm_both$method == 'acoustic'])
 sites_with_both <- acoustic_sites[acoustic_sites %in% unique(comm_both$wetland_id[comm_both$method == 'ptct'])]
 sites_with_both
 
+#create combined community matrix
 comm_both <- subset(comm_both, wetland_id %in% sites_with_both)
 
+#create occupancy matrix
 sp_occ <- pivot_wider(comm_both, names_from = 'method', values_from = value)
 sp_occ$acoustic <- ifelse(is.na(sp_occ$acoustic), 0, sp_occ$acoustic)
 sp_occ$ptct <- ifelse(is.na(sp_occ$ptct), 0, sp_occ$ptct)
 
+#plot
 plot(acoustic ~ ptct, data = sp_occ, type = 'n')
 with(sp_occ, text(ptct, acoustic, labels = name, cex = 0.5))
 abline(a = 0 , b= 1)
 
+#aggregate across methods
 sp_occ_agg <- sp_occ %>% 
     group_by(name) %>% 
     summarize(acoustic = mean(acoustic), ptct = mean(ptct))
 
-plot(acoustic ~ ptct, data = sp_occ_agg, type = 'n')
-with(sp_occ_agg, text(ptct, acoustic, labels = name, cex = 0.5))
+#add species numbers to edit colors & plot
+sp_occ_agg$number <- 1:75
+#define colors
+cols <- rep('black', nrow(sp_occ_agg))
+cols[c( 17, 48)] <- 'red'
+
+plot(acoustic ~ ptct, data = sp_occ_agg, type = 'n', main = 'Mean Species Occupancy By Method')
+with(sp_occ_agg, text(ptct, acoustic, labels = name, cex = 0.5, col = cols))
 abline(a = 0 , b= 1)
 
+sp_occ_sum <- sp_occ %>% 
+    group_by(name) %>% 
+    summarize(acoustic = sum(acoustic), ptct = sum(ptct))
+
+boxplot(sp_occ_sum$acoustic ~ sp_occ_sum$ptct)
 #color mimics separately from others on 1:1 plot. Maybe raptors too?
 #NOMO, BHCO, BRTH
 
 ##TABLE: rank which species are the most different. sp_occ_agg with largest diff.
-
 difference <- sp_occ_agg$acoustic - sp_occ_agg$ptct
 difference_clean <- cbind(sp_occ_agg$name, difference)
 colnames(difference_clean) <- c("name", "difference")
 class(difference_clean)
 write.csv(difference_clean, file = './data/Spec_Occ_Difference.csv', col.names = TRUE,
           row.names = FALSE)
-
-
-
-#for loop sp occ agg. avoid double 0's. 
-#Does r think character string is factor? Check for species codes in sp occ agg.
-totalsp_acou <- sum(sp_occ$acoustic)
-totalsp_ptct <- sum(sp_occ$ptct)
-totalsp_acou$method <- "acoustic"
-totalsp_ptct$method <- "ptct"
-names(totalsp_acou) = c("total_species", names(totalsp_acou) [-1])
-names(totalsp_ptct) = c("total_species", names(totalsp_ptct) [-1])
-total_sp <- rbind(totalsp_acou, totalsp_ptct)
-as.data.frame(total_sp)
-boxplot(total_species ~ method, data = total_sp)
 
 #aggregate species occurrence 
 S_acou <- with(sp_occ, tapply(acoustic, list(wetland_id), sum))
@@ -173,14 +185,12 @@ V_acou <- with(sp_occ, tapply(acoustic, list(wetland_id),
 V_ptct <- with(sp_occ, tapply(ptct, list(wetland_id),
                               function(x) sum(x * (1 - x))))
 
-var <- var(V_acou, V_ptct)
 #fix variance 
 
 #compute correlation
 correlation <- cor.test(S_ptct, S_acou, method=c("pearson"))
 
 #-0.1 cor coefficient indicates no association between the variables
-
 par(mfrow=c(1,2))
 plot(S_ptct, S_acou)
 abline(a = 0, b=1)
@@ -201,10 +211,14 @@ tmp$AOU <- as.integer(tmp$AOU)
 
 write.csv(tmp, 'SpeciesList.csv', row.names = FALSE)
 
+#pair AOU codes to species name codes
+species_aou <- read.csv('./data/SpeciesList_w:AOU.csv')
+sp_occ_both <- merge(sp_occ_agg, species_aou)
+
 #filter to get diurnal land birds only
 
 filter_diurnal <-
-    tmp %>% filter(AOU > 2880) %>%
+    sp_occ_both %>% filter(AOU > 2880) %>%
     
     filter(AOU < 3650 | AOU > 3810) %>%
     
@@ -220,24 +234,16 @@ diurnal_agg <- filter_diurnal %>%
     group_by(name) %>% 
     summarize(acoustic = mean(acoustic), ptct = mean(ptct))
 
-#pair AOU codes to species name codes
-names(comm_pc)
-
-#filter data to diurnal land birds only
-clean_sp_occ_agg <- name[name %in% filter_diurnal$name]
-
-
 #plot 1:1 graph with only diurnal birds
-plot(acoustic ~ ptct, data = sp_occ_agg, type = 'n')
-with(sp_occ_agg, text(ptct, acoustic, labels = name, cex = 0.5))
+plot(acoustic ~ ptct, data = filter_diurnal, type = 'n', main = 'Mean Species Occupancy By Method')
+with(filter_diurnal, text(ptct, acoustic, labels = name, cex = 0.5, col = cols))
 abline(a = 0 , b= 1)
 
-
 #find unique species detected by one method & not the other
-n_acou <- unique(comm$name)
-length(n_acou)
-n_ptct <- unique(comm_ptct$name)
-length(n_ptct)
+name_acou <- unique(comm$name)
+length(name_acou)
+name_ptct <- unique(comm_ptct$name)
+length(name_ptct)
 
 #create unique names for for loop
 uniq_sp <- unique(comm_both$name)
@@ -263,39 +269,51 @@ for(i in seq_along(uniq_sp)){
 #disregarding site.
 
 for(i in seq_along(uniq_sp)){
-    hold <- subset(comm_both, name == uniq_sp[i])
+         hold <- subset(comm_both, name == uniq_sp[i])
             if(any(hold$value > 0)) {
                 if(any(hold$value == 0)){
                 sun <- rbind(hold, subset(hold, value == 0)) 
                 }
-    }
+         }
 }
+
+#fix comm_both, push to git, Dan will fix for loop & try to implement conf intervals.
 
 #Q1: SR comparison: sum diversity anova
 
-sr_ptct <-comm_pc %>%
-    group_by(wetland_id) %>%
-    summarise(species.richness=n()) %>%
-    arrange(-species.richness)
-sr_ptct 
+#sr_ptct <-comm_pc %>%
+    #group_by(wetland_id) %>%
+   # summarise(species.richness=n()) %>%
+    #arrange(-species.richness)
+#sr_ptct 
 
-sr_acou <-comm %>%
-    group_by(wetland_id) %>%
-    summarise(species.richness=n()) %>%
-    arrange(-species.richness)
-sr_acou
+#sr_acou <- comm %>%
+    #group_by(wetland_id) %>%
+    #summarise(species.richness=n()) %>%
+    #arrange(-species.richness)
+#sr_acou
 
-#fig 1 SR comparison fig 2 species by species comparison
+#fig 1 SR analysis: summed occupancy 
+boxplot(S_acou, S_ptct)
+
+#fig 2 species by species comparison
+
 #fig 3 descriptive nature of why are these differing? could be table of species
 #traits (large body, quiet singing). Chi sq tests? We have 2 numbers are they more \
 #diff than expected?
 
-boxplot(S_acou, S_ptct)
-
 boxplot(value ~ name, data = comm_both)
 boxplot(value ~ method, data= comm_both)
 
-chisq.test()
+#null: no SR difference between methods. determine if two categorical variables
+#have a significant correlation between them.
+library(dplyr)
+sumcomm_pc <- comm_pc %>% group_by(wetland_id) %>% summarise_each(funs(sum))
+sumcomm_pc$method <- "ptct"
+length(sumcomm_pc) <- length(sumcomm)
+as.data.frame(sum)
+occ_both <- rbind(sumcomm_pc, sumcomm)
+chisq.test(comm_both$value)
 
 
 #3rd analysis: ptct upland vs lowland, acoustic up vs low, mean combined of the two
@@ -308,11 +326,16 @@ chisq.test()
 
 #Q2:
 #compare across method - sum diversity rather than mean diversity 
-boxplot(comm_both$value~ comm_both$method, xlab = "Monitoring Method", 
-        ylab = "Average Species Richness")
+boxplot(comm_both$value~ comm_both$method, 
+        main = "Average Species Richness by Monitoring Method", 
+        xlab = "Monitoring Method", ylab = "Average Species Richness")
 aov_one.way <- aov(comm_both$value ~ comm_both$method)
+summary(aov_one.way)
 aov_two.way <- aov(comm_both$value ~ comm_both$method + comm_both$habitat)
 summary(aov_two.way)
+
+sum(comm$value)
+sum(comm_ptct$value)
 
 AIC(aov_one.way)
 AIC(aov_two.way)
