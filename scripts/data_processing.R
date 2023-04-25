@@ -62,6 +62,22 @@ dat_sub$start_time[dat_sub$site_id == "HH05"] <- dat_sub$start_time[dat_sub$site
 dat_sub$start_time[dat_sub$site_id == "SP02"] <- dat_sub$start_time[dat_sub$site_id == "SP02"] + 8*60*60
 # SP09 needs 4 hours subtracted
 dat_sub$start_time[dat_sub$site_id == "SP09"] <- dat_sub$start_time[dat_sub$site_id == "SP09"] - 4*60*60
+#HH45 needs 8 hours added
+dat_sub$start_time[dat_sub$site_id == "HH45"] <- dat_sub$start_time[dat_sub$site_id == "HH45"] + 8*60*60
+#HH46 needs 4 hours subtracted
+dat_sub$start_time[dat_sub$site_id == "HH46"] <- dat_sub$start_time[dat_sub$site_id == "HH46"] - 4*60*60
+#HH14 needs 4 hours subtracted
+dat_sub$start_time[dat_sub$site_id == "HH14"] <- dat_sub$start_time[dat_sub$site_id == "HH14"] - 4*60*60
+#HH17 needs 4 hours subtracted
+dat_sub$start_time[dat_sub$site_id == "HH17"] <- dat_sub$start_time[dat_sub$site_id == "HH17"] - 4*60*60
+#HH48 needs 4 hours subtracted
+dat_sub$start_time[dat_sub$site_id == "HH48"] <- dat_sub$start_time[dat_sub$site_id == "HH48"] - 4*60*60
+#SP05 needs 4 hours subtracted
+dat_sub$start_time[dat_sub$site_id == "SP05"] <- dat_sub$start_time[dat_sub$site_id == "SP05"] - 4*60*60
+#SP01 needs 4 hours subtracted
+dat_sub$start_time[dat_sub$site_id == "SP01"] <- dat_sub$start_time[dat_sub$site_id == "SP01"] - 4*60*60
+#UP04 needs 4 hours subtracted
+dat_sub$start_time[dat_sub$site_id == "UP04"] <- dat_sub$start_time[dat_sub$site_id == "UP04"] - 4*60*60
 
 #fix date time
 # HH01 needs 4 hours subtracted
@@ -76,6 +92,22 @@ dat_sub$date_time[dat_sub$site_id == "HH05"] <- dat_sub$date_time[dat_sub$site_i
 dat_sub$date_time[dat_sub$site_id == "SP02"] <- dat_sub$date_time[dat_sub$site_id == "SP02"] + 8*60*60
 # SP09 needs 4 hours subtracted
 dat_sub$date_time[dat_sub$site_id == "SP09"] <- dat_sub$date_time[dat_sub$site_id == "SP09"] - 4*60*60
+#HH45 needs 8 hours added
+dat_sub$start_time[dat_sub$site_id == "HH45"] <- dat_sub$date_time[dat_sub$site_id == "HH45"] + 8*60*60
+#HH46 needs 4 hours subtracted
+dat_sub$start_time[dat_sub$site_id == "HH46"] <- dat_sub$date_time[dat_sub$site_id == "HH46"] - 4*60*60
+#HH14 needs 4 hours subtracted
+dat_sub$start_time[dat_sub$site_id == "HH14"] <- dat_sub$date_time[dat_sub$site_id == "HH14"] - 4*60*60
+#HH17 needs 4 hours subtracted
+dat_sub$start_time[dat_sub$site_id == "HH17"] <- dat_sub$date_time[dat_sub$site_id == "HH17"] - 4*60*60
+#HH48 needs 4 hours subtracted
+dat_sub$start_time[dat_sub$site_id == "HH48"] <- dat_sub$date_time[dat_sub$site_id == "HH48"] - 4*60*60
+#SP05 needs 4 hours subtracted
+dat_sub$start_time[dat_sub$site_id == "SP05"] <- dat_sub$date_time[dat_sub$site_id == "SP05"] - 4*60*60
+#SP01 needs 4 hours subtracted
+dat_sub$start_time[dat_sub$site_id == "SP01"] <- dat_sub$date_time[dat_sub$site_id == "SP01"] - 4*60*60
+#UP04 needs 4 hours subtracted
+dat_sub$start_time[dat_sub$site_id == "UP04"] <- dat_sub$date_time[dat_sub$site_id == "UP04"] - 4*60*60
 
 # sunup
 dawn_times <- as.POSIXlt(paste(dat_sub$date, "6:00"), tz = 'EST',
