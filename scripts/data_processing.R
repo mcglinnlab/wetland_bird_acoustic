@@ -62,6 +62,10 @@ dat_sub$start_time[dat_sub$site_id == "HH05"] <- dat_sub$start_time[dat_sub$site
 dat_sub$start_time[dat_sub$site_id == "HH14"] <- dat_sub$start_time[dat_sub$site_id == "HH14"] - 4*60*60
 #HH17 needs 4 hours subtracted
 dat_sub$start_time[dat_sub$site_id == "HH17"] <- dat_sub$start_time[dat_sub$site_id == "HH17"] - 4*60*60
+#HH30 needs 4 hours subtracted
+dat_sub$start_time[dat_sub$site_id == "HH30"] <- dat_sub$start_time[dat_sub$site_id == "HH30"] - 4*60*60
+#HH31 needs 5 hours added (survey date 6/7)
+dat_sub$start_time[dat_sub$site_id == "HH31"] <- dat_sub$start_time[dat_sub$site_id == "HH31"] + 5*60*60
 #HH45 needs 4 hours subtracted
 dat_sub$start_time[dat_sub$site_id == "HH45"] <- dat_sub$start_time[dat_sub$site_id == "HH45"] - 4*60*60
 #HH46 needs 4 hours subtracted
@@ -72,6 +76,8 @@ dat_sub$start_time[dat_sub$site_id == "HH48"] <- dat_sub$start_time[dat_sub$site
 dat_sub$start_time[dat_sub$site_id == "SP01"] <- dat_sub$start_time[dat_sub$site_id == "SP01"] - 4*60*60
 # SP02 needs 4 hours added! (real date is 6/14/22)
 dat_sub$start_time[dat_sub$site_id == "SP02"] <- dat_sub$start_time[dat_sub$site_id == "SP02"] + 4*60*60
+#SP03 needs 4 hours subtracted
+dat_sub$start_time[dat_sub$site_id == "SP03"] <- dat_sub$start_time[dat_sub$site_id == "SP03"] - 4*60*60
 # SP09 needs 4 hours subtracted
 dat_sub$start_time[dat_sub$site_id == "SP09"] <- dat_sub$start_time[dat_sub$site_id == "SP09"] - 4*60*60
 #SP05 needs 4 hours subtracted
@@ -92,6 +98,10 @@ dat_sub$date_time[dat_sub$site_id == "HH05"] <- dat_sub$date_time[dat_sub$site_i
 dat_sub$start_time[dat_sub$site_id == "HH14"] <- dat_sub$date_time[dat_sub$site_id == "HH14"] - 4*60*60
 #HH17 needs 4 hours subtracted
 dat_sub$start_time[dat_sub$site_id == "HH17"] <- dat_sub$date_time[dat_sub$site_id == "HH17"] - 4*60*60
+#HH30 needs 4 hours subtracted
+dat_sub$start_time[dat_sub$site_id == "HH30"] <- dat_sub$date_time[dat_sub$site_id == "HH30"] - 4*60*60
+#HH31 needs 5 hours added (survey date 6/7)
+dat_sub$start_time[dat_sub$site_id == "HH31"] <- dat_sub$date_time[dat_sub$site_id == "HH31"] + 5*60*60
 #HH45 needs 4 hours subtracted
 dat_sub$start_time[dat_sub$site_id == "HH45"] <- dat_sub$date_time[dat_sub$site_id == "HH45"] - 4*60*60
 #HH46 needs 4 hours subtracted
@@ -102,6 +112,8 @@ dat_sub$start_time[dat_sub$site_id == "HH48"] <- dat_sub$date_time[dat_sub$site_
 dat_sub$start_time[dat_sub$site_id == "SP01"] <- dat_sub$date_time[dat_sub$site_id == "SP01"] - 4*60*60
 # SP02 needs 4 hours added (real date is 6/14/22)
 dat_sub$date_time[dat_sub$site_id == "SP02"] <- dat_sub$date_time[dat_sub$site_id == "SP02"] + 4*60*60
+# SP03 needs 4 hours subtracted
+dat_sub$date_time[dat_sub$site_id == "SP03"] <- dat_sub$date_time[dat_sub$site_id == "SP03"] - 4*60*60
 # SP09 needs 4 hours subtracted
 dat_sub$date_time[dat_sub$site_id == "SP09"] <- dat_sub$date_time[dat_sub$site_id == "SP09"] - 4*60*60
 #SP05 needs 4 hours subtracted
