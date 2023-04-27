@@ -1,3 +1,56 @@
+#Read in data
+
+sumcomm <- read.csv('./data/clean_data/sumcomm.csv') # comm matrix when all detections are totaled
+comm <- read.csv('./data/clean_data/comm.csv')       # comm matrix when detections are converted into proportions
+dat_sub <- read.csv('./data/clean_data/subset_data.csv') #the cleaned acoustic data with confidence levels and times
+
+comm$CWWI
+comm$BGGN
+
+#Chuck-will's widow - NIGHTIME
+#write.csv(row.names(comm[comm$CWWI > 1,]), file = './data/CHNA_detections.csv')
+
+# distribution of species richness
+hist(rowSums(comm > 0), xlab= "# of Species detected across all recordings at site",
+     main = "Distribution of Species Richness")
+sr <- rowSums(comm > 0)
+plot(density(sr))
+sr_site_id <- tapply(sr, wetland_id, mean)
+srlog <- log(sr)
+
+boxplot(srlog ~ habitat, ylab = "log(Species Richness)", xlab="Habitat", 
+        main="Species Richness by Habitat")
+boxplot(sr~wetland_id, ylab = "Species Richness", xlab="Site ID", 
+        main="Species Richness per Site")
+boxplot(sr~property, ylab = "Species Richness", xlab="Wetland Sites by Property",
+        main="Wetland SR by Property")
+
+hist(sr, xlab="Species Richness", main = "Histogram of Species Richness")
+
+
+sr <- rowSums(comm > 0)
+plot(density(sr))
+sr_site_id <- tapply(sr, wetland_id, mean)
+srlog <- log(sr)
+
+boxplot(srlog ~ habitat, ylab = "log(Species Richness)", xlab="Habitat", 
+        main="Species Richness by Habitat")
+boxplot(sr~wetland_id, ylab = "Species Richness", xlab="Site ID", 
+        main="Species Richness per Site")
+boxplot(sr~property, ylab = "Species Richness", xlab="Wetland Sites by Property",
+        main="Wetland SR by Property")
+
+hist(sr, xlab="Species Richness", main = "Histogram of Species Richness")
+
+
+
+
+
+
+
+
+
+
 qqnorm(sr)
 qqline(sr,col=2)
 
