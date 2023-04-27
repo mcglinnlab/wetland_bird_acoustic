@@ -1,20 +1,6 @@
-library(vegan)
-library(readr)
-library(dplyr)
-library(easyCODA)
-
-make_sp_codes <- function(x) {
-    sp_genus <- toupper(substring(x, 1, 2))
-    sp_sp    <- toupper(sapply(strsplit(x, ' ', fixed = TRUE),
-                               function(x)substring(x[2], 1, 2)))
-    sp_code <- paste(sp_genus, sp_sp, sep='')
-    sp_code
-}
 
 # read in data and reformat -----------
 dat <- read.csv('./data/compiled_bird_audio_survey_master.csv')
-
-dat$names <- make_sp_codes(dat$Common.name)
 
 dat$site_time <- paste(dat$site_id, dat$date_time, sep ='_')
 
@@ -37,6 +23,7 @@ head(dat)
 # subset any confidence less than 0.5
 dat_sub <- subset(dat, Confidence > 0.5)
 
+# format date fields properly
 dat_sub$date_time <- as.POSIXlt(dat_sub$date_time, tz = 'EST',
                                 format = "%m/%d/%Y %H:%M")
 dat_sub$start_time <-  as.POSIXlt(dat_sub$start_time, tz = 'EST',
@@ -121,15 +108,15 @@ dat_sub$start_time[dat_sub$site_id == "SP05"] <- dat_sub$date_time[dat_sub$site_
 #UP04 needs 4 hours subtracted
 dat_sub$start_time[dat_sub$site_id == "UP04"] <- dat_sub$date_time[dat_sub$site_id == "UP04"] - 4*60*60
 
-# sunup
-dawn_times <- as.POSIXlt(paste(dat_sub$date, "6:00"), tz = 'EST',
+# survey start time
+start_time <- as.POSIXlt(paste(dat_sub$date, "7:00"), tz = 'EST',
                          format = "%m/%d/%Y %H:%M")
 # survey end time
-end_times <- as.POSIXlt(paste(dat_sub$date, "9:00"), tz = 'EST',
+end_time <- as.POSIXlt(paste(dat_sub$date, "8:00"), tz = 'EST',
                         format = "%m/%d/%Y %H:%M")
 
 # subset dat_sub to dawn chorus times 
-dat_sub <- dat_sub[dat_sub$start_time > dawn_times & dat_sub$start_time < end_times, ]
+dat_sub <- dat_sub[dat_sub$start_time > start_time & dat_sub$start_time < end_time, ]
 
 # make unique id that has site_id and date_time
 dat_sub$site_date <- with(dat_sub, paste(site_id, date_time, sep = '_'))
