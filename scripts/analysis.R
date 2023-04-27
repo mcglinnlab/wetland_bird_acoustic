@@ -1,63 +1,31 @@
-library(vegan)
-library(readr)
+library(ggplot2)
 library(dplyr)
-library(easyCODA)
-library(tidyverse)
-library(here)
+library(tidyr)
+#library(vegan)
+#library(readr)
+#library(easyCODA)
+#library(tidyverse)
+#library(here)
 
 #Read in data
 
-sumcomm <- read.csv('./data/clean_data/sumcomm.csv')
-comm <- read.csv('./data/clean_data/comm.csv')
-dat_sub <- read.csv('./data/clean_data/subset_data.csv')
-
-comm$CWWI
-comm$BGGN
-
-#Chuck-will's widow - NIGHTIME
-write.csv(row.names(comm[comm$CWWI > 1,]), file = './data/CHNA_detections.csv')
-
-# distribution of species richness
-hist(rowSums(comm > 0), xlab= "# of Observations within 5 min interval",
-     main = "Distribution of Species Richness")
-
-#subsample out in equal amounts of upland and wetlands or statistically model for
-#the temporal and spatial autocorrelation. pseudo-replication.
+sumcomm <- read.csv('./data/clean_data/sumcomm.csv') # comm matrix when all detections are totaled
+comm <- read.csv('./data/clean_data/comm.csv')       # comm matrix when detections are converted into proportions
+dat_sub <- read.csv('./data/clean_data/subset_data.csv') #the cleaned acoustic data with confidence levels and times
 
 # look at species ranks based upon number of occurrences
-ac_abundance <- sort(colSums(comm > 0), dec = T)
-write.csv(ac_abundance, file = "./data/clean_data/ac_abundance.csv", row.names = TRUE)
+ac_abundance <- sort(colSums(comm[ , -1] > 0), dec = T)
+#write.csv(ac_abundance, file = "./data/clean_data/ac_abundance.csv", row.names = TRUE)
 
 colnames(comm)
-wetland_id <- comm$wetland_id
+comm_wetland_id <- comm$wetland_id
 #date_time <- sapply(strsplit(row.names(comm), '_'), function(x) x[2])
-habitat <- ifelse(substring(wetland_id, 1, 1) == 'U', 'upland', 'wetland')
-property_wet <- ifelse(substring(wetland_id, 1, 1) == 'H', 'Halidon', 'Stono')
-#need to assign Halidon vs stono if we care to compare
-#property <- ifelse(substring(site_id, 1, 1) == 'H', 'Halidon', 'Stono')
+habitat <- ifelse(substring(comm_wetland_id, 1, 1) == 'U', 'upland', 'wetland')
+property <- ifelse(substring(comm_wetland_id, 1, 1) == 'H', 'Halidon', 'Stono')
 
-table(habitat)
+# need to drop upland sites
 
-sr <- rowSums(comm > 0)
-plot(density(sr))
-sr_site_id <- tapply(sr, wetland_id, mean)
-srlog <- log(sr)
-
-boxplot(srlog ~ habitat, ylab = "log(Species Richness)", xlab="Habitat", 
-        main="Species Richness by Habitat")
-boxplot(sr~wetland_id, ylab = "Species Richness", xlab="Site ID", 
-        main="Species Richness per Site")
-boxplot(sr~property_wet, ylab = "Species Richness", xlab="Wetland Sites by Property",
-        main="Wetland SR by Property")
-
-hist(sr, xlab="Species Richness", main = "Histogram of Species Richness")
-
-#separate comm matrix by habitat type
-srhab <- cbind(sr,habitat)
-srhab <- as.data.frame(srhab)
-wetsr <- srhab %>% filter(habitat=='wetland', na.rm=TRUE)
-upsr <- srhab %>% filter(habitat=='upland', na.rm=TRUE)
-
+# read in point count data
 dat_pc <- read.csv('https://raw.githubusercontent.com/mcglinnlab/wetland_birds/main/data/filtered_data/clean_bird_dat.csv')
 #note: in dat_pc from Jackson that wetland_id is equivalent to what I've called
 # site_id; therefore let's rename wetland_id to site_id for simplicity
@@ -71,67 +39,62 @@ comm_pc = subset(comm_pc, select = -c(BGNN))
 comm_pc$BASP
 comm_pc$BCSP
 comm_pc$BACS = comm_pc$BACS + comm_pc$BCSP
+comm_pc$BHNU = 
+
+  
 #drop comm_pc$BCSP
 comm_pc = subset(comm_pc, select = -c(BCSP))
 
 
 #look at species ranks based upon number of occurrences
-pc_abundance <- sort(colSums(comm_pc > 0), dec = T)
-write.csv(pc_abundance, file = "./data/clean_data/pc_abundance.csv", row.names = TRUE)
+pc_abundance <- sort(colSums(comm_pc[,-1] > 0), dec = T)
+#write.csv(pc_abundance, file = "./data/clean_data/pc_abundance.csv", row.names = TRUE)
 
 #create sum ptct
-library(dplyr)
 sumcomm_ptct <- comm_pc %>% group_by(wetland_id) %>% summarise_each(funs(sum))
-
-sr_pc <- rowSums(comm_pc[ , -(1)] > 0)
-plot(density(sr_pc))
-
-sr_avg <- tapply(sr_pc, comm_pc$wetland, mean)
-sr_avg
-plot(sr_avg)
 
 #transform into data frame
 comm_ptct <- as.data.frame(comm_pc)
 
-sr_avg_df <- data.frame(wetland_id = names(sr_avg), S = sr_avg)
-sr_site_id_df <- data.frame(wetland_id = names(sr_site_id), S = sr_site_id)
-
-sr_merge <- merge(sr_avg_df, sr_site_id_df, by = 'wetland_id', all = TRUE)
-
-plot(S.y ~ S.x, data = sr_merge)
-abline(a = 0 , b=1)
-
 #compress point counts and acoustic into a single value per sample, tapply or aggregate
 #merge & get 2 NOCA's- one for PC & one for acoustic
-comm_ptct <- aggregate(comm_ptct, by = list(comm_ptct$wetland_id), function(x) sum(x > 0) / length(x))
+comm_ptct <- aggregate(comm_ptct, by = list(comm_ptct$wetland_id),
+                       function(x) sum(x > 0) / length(x))
+
 # drop wetland id and rename group 1 to wetland id
 names(comm_ptct)
-comm_ptct = subset(comm_ptct, select = -wetland_id)
-names(comm_ptct)= c("wetland_id", names(comm_ptct) [-1])
+comm_ptct <- subset(comm_ptct, select = -wetland_id)
+names(comm_ptct) <- c("wetland_id", names(comm_ptct) [-1])
 names(comm_ptct)
-names(sumcomm) = c("wetland_id", names(sumcomm) [-1])
+names(sumcomm) <- c("wetland_id", names(sumcomm) [-1])
 
 #pivot data frame to long format
-library(tidyr)
-comm <- pivot_longer(comm, cols = !wetland_id)
-comm_ptct <- pivot_longer(comm_ptct, cols = !wetland_id)
+
+comm_lg <- pivot_longer(comm, cols = !wetland_id)
+comm_lg_ptct <- pivot_longer(comm_ptct, cols = !wetland_id)
 
 #add column to dataframes indicating methods
-comm_ptct$method <- "ptct"
-comm$method <- "acoustic"
+comm_lg_ptct$method <- "ptct"
+comm_lg$method <- "acoustic"
 sumcomm$method <- "acoustic"
 sumcomm_ptct$method <- "ptct"
 
 #row append community matrices
-comm_both <- rbind(comm, comm_ptct)
+comm_both <- rbind(comm_lg, comm_lg_ptct)
 
 # drop sites not found in both sampling methods 
 acoustic_sites <- unique(comm_both$wetland_id[comm_both$method == 'acoustic'])
 sites_with_both <- acoustic_sites[acoustic_sites %in% unique(comm_both$wetland_id[comm_both$method == 'ptct'])]
 sites_with_both
 
+# drop upland sites
+sites_with_both <- sites_with_both[!grepl('UP', sites_with_both)]
+
 #create combined community matrix
 comm_both <- subset(comm_both, wetland_id %in% sites_with_both)
+
+# remove value of zero
+comm_both <- subset(comm_both, value > 0)
 
 #create occupancy matrix
 sp_occ <- pivot_wider(comm_both, names_from = 'method', values_from = value)
@@ -148,21 +111,199 @@ sp_occ_agg <- sp_occ %>%
     group_by(name) %>% 
     summarize(acoustic = mean(acoustic), ptct = mean(ptct))
 
-#add species numbers to edit colors & plot
-sp_occ_agg$number <- 1:75
-#define colors
-cols <- rep('black', nrow(sp_occ_agg))
-cols[c( 17, 48)] <- 'red'
-
-plot(acoustic ~ ptct, data = sp_occ_agg, type = 'n', main = 'Mean Species Occupancy By Method')
-with(sp_occ_agg, text(ptct, acoustic, labels = name, cex = 0.5, col = cols))
+plot(acoustic ~ ptct, data = sp_occ_agg, type = 'n',
+     xlab = 'Point Count Average Species Occupancy', 
+     ylab = 'Passive Acoustic Average Species Occupancy')
+with(sp_occ_agg, text(ptct, acoustic, labels = name, cex = 1))
 abline(a = 0 , b= 1)
 
-sp_occ_sum <- sp_occ %>% 
-    group_by(name) %>% 
-    summarize(acoustic = sum(acoustic), ptct = sum(ptct))
+plot(I(sp_occ_agg$ptct + 0.01), I(sp_occ_agg$acoustic + 0.01), type = 'n', log = 'xy',
+     xlab = 'Point Count Average Species Occupancy', 
+     ylab = 'Passive Acoustic Average Species Occupancy')
+abline(a = 0 , b= 1)
+with(sp_occ_agg, text(I(ptct + 0.01), I(acoustic + 0.01), labels = name, cex = 0.75))
 
-boxplot(sp_occ_sum$acoustic ~ sp_occ_sum$ptct)
+# mockup of barplot drafts
+tmp <- pivot_longer(sp_occ_agg, cols = 2:3, names_to = 'method')
+#stacked
+barplot(value ~ method + name, data = tmp)
+#side-by-side
+barplot(value ~ method + name, data = tmp, beside = TRUE)
+# subset to species with largest differences
+occ_diff <- with(sp_occ_agg, abs(ptct - acoustic))
+top_sp <- sp_occ_agg$name[order(occ_diff, decreasing = T)][1:10]
+top_sp
+barplot(value ~ method + name, data = tmp, subset = name %in% top_sp,
+        beside = TRUE)
+
+# need CI for occ estimates
+boot_occ <- function(comm, grp, return_S = FALSE) {
+  grp_lvs <- unique(grp)
+  row_indices <- NULL
+  for (i in seq_along(grp_lvs)) { 
+    row_indices <- c(row_indices, 
+                     sample(which(grp == grp_lvs[i]), replace = TRUE))
+  }
+  # rand set of comm
+  occ <- aggregate(comm[row_indices, ], list(grp), function(x) sum(x > 0) / length(x))
+  if (return_S)
+    rowSums(occ[ , -1])
+  else {
+    rownames(occ) <- occ$Group.1
+    occ <- occ[ , -1]
+    as.matrix(occ)
+  }
+}
+
+boot_sp_occ <- function(comm, grp, return_S = FALSE) {
+  grp_lvs <- unique(grp)
+  row_indices <- NULL
+  for (i in seq_along(grp_lvs)) { 
+    row_indices <- c(row_indices, 
+                     sample(which(grp == grp_lvs[i]), replace = TRUE))
+  }
+  # rand set of comm
+  occ <- tapply(comm[row_indices], list(grp), function(x) sum(x > 0) / length(x))
+  if (return_S)
+    sum(occ)
+  else {
+    t(occ)
+  }
+}
+
+
+# demo with acoustic data
+# you have a choice randomly select 5- min pt counts or randomly select sites
+# simpler to bootstrap on just randomly drawn sites so let's do that first
+
+comm_aco <- with(dat_sub, tapply(Confidence, INDEX = list(site_date, sp_code),
+                                 function(x) (sum(x) > 0)*1))
+comm_aco <- ifelse(is.na(comm_aco), 0, comm_aco)
+comm_aco
+comm_aco_sites <- substr(rownames(comm_aco), 1, 4)
+
+# drop upland sites
+comm_aco <- subset(comm_aco, !grepl('UP', comm_aco_sites))
+comm_aco <- as.data.frame(comm_aco)
+comm_aco
+comm_aco_sites <- substr(rownames(comm_aco), 1, 4)
+comm_aco_sites
+
+# get ptct in correct format
+comm_pc <- subset(comm_pc, wetland_id %in% comm_aco_sites)
+comm_pc_sites <- comm_pc$wetland_id
+comm_pc <- subset(comm_pc, select = -wetland_id)
+comm_pc <- (comm_pc > 0) * 1
+
+# 
+#dat_pc <- pivot_longer(data.frame(wetland_id = comm_pc_sites, comm_pc),
+#                       cols = -wetland_id)
+#dat_aco <- pivot_longer(data.frame(wetland_id = comm_aco_sites, comm_aco), 
+#                        cols = -wetland_id)
+#dat_both <- rbind(data.frame(dat_pc, method = 'ptct'),
+#                  data.frame(dat_aco, method = 'acoustic'))
+#dim(dat_both)
+#table(dat_both$value)
+#head(dat_both)
+#pivot_wider(dat_both, names_from = name, values_from = value)
+
+boot_occ(comm_aco, grp = comm_aco_sites)
+boot_occ(comm_pc, grp = comm_pc_sites)
+
+aco_boots <- replicate(1e3, boot_occ(comm_aco, grp = comm_aco_sites), simplify = FALSE)
+aco_sp_q <- apply(sapply(aco_boots, function(x) apply(x, 2, mean)), 1, quantile, c(0.025, 0.5, 0.975))
+aco_sp_a <- apply(sapply(aco_boots, function(x) apply(x, 2, mean)), 1, mean)
+
+pc_boots<- replicate(1e3, boot_occ(comm_pc, grp = comm_pc_sites), simplify = FALSE)
+pc_sp_q <- apply(sapply(pc_boots, function(x) apply(x, 2, mean)), 1, quantile, c(0.025, 0.5, 0.975))
+pc_sp_a <- apply(sapply(pc_boots, function(x) apply(x, 2, mean)), 1, mean)
+
+aco_sp_q
+pc_sp_q
+
+aco_sp_a
+pc_sp_a
+
+all_sp_list <- sort(unique(c(names(aco_sp_a), names(pc_sp_a))))
+all_sp_list
+
+occ_sum <- data.frame()
+for (i in seq_along(all_sp_list)) { 
+    occ <- lo <- me <- hi <- c(0, 0)
+    if (any(names(aco_sp_a) == all_sp_list[i])) {
+        occ[1] <- aco_sp_a[names(aco_sp_a) == all_sp_list[i]]
+        lo[1] <- aco_sp_q[1, colnames(aco_sp_q) == all_sp_list[i]]
+        me[1] <- aco_sp_q[2, colnames(aco_sp_q) == all_sp_list[i]]
+        hi[1] <- aco_sp_q[3, colnames(aco_sp_q) == all_sp_list[i]]
+    }
+    if (any(names(pc_sp_a) == all_sp_list[i])) {
+        occ[2] <- pc_sp_a[names(pc_sp_a) == all_sp_list[i]]
+        lo[2] <- pc_sp_q[1, colnames(pc_sp_q) == all_sp_list[i]]
+        me[2] <- pc_sp_q[2, colnames(pc_sp_q) == all_sp_list[i]]
+        hi[2] <- pc_sp_q[3, colnames(pc_sp_q) == all_sp_list[i]]
+    }
+    # examine if intervals do not overlap
+    occ_diff <- abs(occ[1] - occ[2])
+    sig_diff <- lo[1] > hi[2] | lo[2] > hi[1]
+    
+    occ_sum <- rbind(occ_sum, 
+                     data.frame(name = all_sp_list[i],
+                                occ, lo, me, hi, method = c('acoustic', 'ptct'),
+                                occ_diff, sig_diff))
+}
+
+# which species have sig diffs?
+tmp <- subset(occ_sum, sig_diff == TRUE)
+tmp <- tmp[order(tmp$occ_diff, decreasing = TRUE), ]
+tmp$name <- factor(tmp$name, levels = unique(tmp$name))
+
+ggplot(tmp, aes(x = name, y = me)) +
+  geom_point(aes(col = method)) + 
+  geom_errorbar(aes(ymin = lo, ymax = hi, col = method), width = 0.2) + 
+  xlab('Species Code') + 
+  ylab('Species Site Occupancy') +
+  scale_color_discrete(labels=c('Passive', 'Active')) +
+  theme_minimal()
+ggsave('./figs/species_occupancy_with_quantiles.pdf', width = 11.3, height = 6.15)
+
+occ_sum_wide <- pivot_wider(occ_sum, names_from = method, values_from = c(occ, lo, me, hi))
+names(occ_sum_wide)
+
+pdf('./figs/species_occupacny_one_to_one.pdf')
+plot(occ_sum_wide$`me_point count`, occ_sum_wide$me_passive, type='n',
+     xlab = 'Active Count Median Species Occupancy',
+     ylab = 'Passive Count Median Species Occupancy')
+abline(a = 0, b=1)
+with(occ_sum_wide, 
+     text(`me_point count`, me_passive, labels = name, col = 'grey', cex = 0.75))
+with(subset(occ_sum_wide, sig_diff == TRUE), 
+     text(`me_point count`, me_passive, labels = name, cex = 0.75))
+dev.off()
+
+
+
+
+occ_sum <- data.frame()
+for (i in seq_along(all_sp_list)) { 
+  occ <- c(0, 0)
+  if (any(names(aco_sp_a) == all_sp_list[i]))
+    occ[1] <- aco_sp_a[names(aco_sp_a) == all_sp_list[i]]
+  if (any(names(pc_sp_a) == all_sp_list[i]))
+    occ[2] <- pc_sp_a[names(pc_sp_a) == all_sp_list[i]]
+  occ_sum <- rbind(occ_sum, 
+                   data.frame(name = all_sp_list[i],
+                              acoustic = occ[1], ptct = occ[2]))
+}
+
+plot(occ_sum$ptct, occ_sum$acoustic)
+abline(a = 0, b=1)
+cor(occ_sum$ptct, occ_sum$acoustic)
+
+
+
+ggplot(occ_sum, aes(x = name, y = me)) + 
+  geom_bar(stat = 'identity', aes(fill = method), position=position_dodge())
+
 #color mimics separately from others on 1:1 plot. Maybe raptors too?
 #NOMO, BHCO, BRTH
 
