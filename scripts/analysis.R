@@ -136,6 +136,8 @@ top_sp
 barplot(value ~ method + name, data = tmp, subset = name %in% top_sp,
         beside = TRUE)
 
+# species level occupancy analysis --------------------------------------
+
 # need CI for occ estimates
 boot_occ <- function(comm, grp, return_S = FALSE) {
   grp_lvs <- unique(grp)
@@ -154,6 +156,20 @@ boot_occ <- function(comm, grp, return_S = FALSE) {
     as.matrix(occ)
   }
 }
+
+boot_raw_S <- function(comm, grp) {
+  grp_lvs <- unique(grp)
+  row_indices <- NULL
+  for (i in seq_along(grp_lvs)) { 
+    row_indices <- c(row_indices, 
+                     sample(which(grp == grp_lvs[i]), replace = TRUE))
+  }
+  # rand set of comm
+  S <- rowSums(comm[row_indices, ] > 0)
+  Savg <- tapply(S, list(grp), mean)
+  Savg
+}
+
 
 boot_sp_occ <- function(comm, grp, return_S = FALSE) {
   grp_lvs <- unique(grp)
@@ -300,9 +316,141 @@ abline(a = 0, b=1)
 cor(occ_sum$ptct, occ_sum$acoustic)
 
 
-
 ggplot(occ_sum, aes(x = name, y = me)) + 
   geom_bar(stat = 'identity', aes(fill = method), position=position_dodge())
+
+
+# community level diversity analysis --------------------------------------
+
+# first just use pres-absence and do bootstrapping
+
+boot_raw_S(comm_aco, comm_aco_sites)
+
+
+plot( boot_raw_S(comm_pc, comm_pc_sites), 
+     boot_raw_S(comm_aco, comm_aco_sites), ylim = c(0, 5), xlim = c(0,5))
+replicate(100, points(boot_raw_S(comm_pc, comm_pc_sites), 
+     boot_raw_S(comm_aco, comm_aco_sites)))
+
+aco_div_boots <- replicate(1e3, boot_raw_S(comm_aco, comm_aco_sites))
+pc_div_boots <- replicate(1e3, boot_raw_S(comm_pc, comm_pc_sites))
+
+# quantiles of site level richness values
+aco_div_q <- apply(aco_div_boots, 1, quantile, c(0.025, 0.5, 0.975))
+pc_div_q <- apply(pc_div_boots, 1, quantile, c(0.025, 0.5, 0.975))
+
+# quantiles of average richness values
+aco_div_q <- quantile(colMeans(aco_div_boots), c(0.025, 0.5, 0.975))
+pc_div_q <- quantile(colMeans(pc_div_boots), c(0.025, 0.5, 0.975))
+
+aco_div_q
+pc_div_q
+# not sure which of the two above is best
+
+plot(pc_div_q[2, ], aco_div_q[2, ])
+
+# ignore site level information
+aco_div_boots <- replicate(1e3, boot_raw_S(comm_aco, rep(1, nrow(comm_aco))))
+pc_div_boots <- replicate(1e3, boot_raw_S(comm_pc, rep(1, nrow(comm_pc))))
+
+aco_div_q2 <- quantile(aco_div_boots, c(0.025, 0.5, 0.975))
+pc_div_q2 <- quantile(pc_div_boots, c(0.025, 0.5, 0.975))
+
+aco_div_q2
+#2.5%      50%    97.5% 
+#2.113260 2.240331 2.378522 
+pc_div_q2
+#2.5%      50%    97.5% 
+#2.611111 2.930556 3.222222 
+
+# both bootsrap procedures are giving same take home message
+# the richness is lower in the acoustic dataset at a 5 min interva
+
+# then repeat but using occupancy estimates
+
+dim(aco_boots)
+
+# site level
+apply(sapply(aco_boots, rowSums), 1, quantile, 
+      c(0.025, 0.5, 0.975))
+
+apply(sapply(pc_boots, rowSums), 1, quantile, 
+      c(0.025, 0.5, 0.975))
+
+# study level but still at site grain
+aco_div_occ <- quantile(colMeans(sapply(aco_boots, rowSums)),
+                        c(0.025, 0.5, 0.975))
+pc_div_occ <- quantile(colMeans(sapply(pc_boots, rowSums)),
+                        c(0.025, 0.5, 0.975))
+
+aco_div_occ
+pc_div_occ
+#2.5%      50%    97.5% 
+#2.089535 2.205645 2.332023 
+
+#2.5%      50%    97.5% 
+#2.511111 2.766667 3.033611 
+
+#same basic pattern as with raw richness
+
+# make some graphs of richness
+
+# from raw occurrences
+
+pdf('./figs/species_richness_comparison_from_raw_occurrences.pdf')
+bp <- barplot(c(aco_div_q[2], pc_div_q[2]), 
+              names =  c('passive acoustic', 'point count'),
+              ylab = 'Median Species Richness',
+              ylim = c(0, 3.5),
+              width = 0.35, xlim = c(0, 1))
+arrows(bp[1], aco_div_q[1], bp[1], aco_div_q[3], 
+       angle = 90, code =3, length = 0.2)
+arrows(bp[2], pc_div_q[1], bp[2], pc_div_q[3], 
+       angle = 90, code =3, length = 0.2)
+dev.off()
+
+# from occupancy sums
+
+bp <- barplot(c(aco_div_occ[2], pc_div_occ[2]), 
+        names =  c('passive acoustic', 'point count'),
+        ylim = c(0, 3.5),
+        width = 0.35, xlim = c(0, 1))
+arrows(bp[1], aco_div_occ[1], bp[1], aco_div_occ[3], 
+       angle = 90, code =3, length = 0.2)
+arrows(bp[2], pc_div_occ[1], bp[2], pc_div_occ[3], 
+       angle = 90, code =3, length = 0.2)
+
+
+# the two above barplots are identical
+# so it doesn't matter if you use raw occur and compute richness
+# or you first convert to occupancy and then sum the occupancies
+
+# now to examine beta diversity
+
+aco_boots[[1]][1:5, 1:10]
+
+calc_beta <- function(occ_comm) {
+  mean_sp_occs <- colMeans(occ_comm)
+  gamma <- sum(mean_sp_occs > 0)
+  1 / mean(mean_sp_occs)
+}
+  
+
+aco_beta_q <- quantile(sapply(aco_boots, calc_beta), c(0.025, 0.5, 0.975))
+pc_beta_q <- quantile(sapply(pc_boots, calc_beta), c(0.025, 0.5, 0.975))
+
+pdf('./figs/whittakers_beta_comparison.pdf')
+bp <- barplot(c(aco_beta_q[2], pc_beta_q[2]), 
+              names =  c('passive acoustic', 'point count'),
+              ylab = expression('Species Turnover ('*beta[w]*')'),
+              ylim = c(1, 30),
+              width = 0.35, xlim = c(0, 1))
+arrows(bp[1], aco_beta_q[1], bp[1], aco_beta_q[3], 
+       angle = 90, code =3, length = 0.2)
+arrows(bp[2], pc_beta_q[1], bp[2], pc_beta_q[3], 
+       angle = 90, code =3, length = 0.2)
+dev.off()
+
 
 #color mimics separately from others on 1:1 plot. Maybe raptors too?
 #NOMO, BHCO, BRTH
