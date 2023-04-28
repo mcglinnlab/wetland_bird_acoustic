@@ -1,6 +1,7 @@
 library(ggplot2)
 library(dplyr)
 library(tidyr)
+library(mobr)
 #library(vegan)
 #library(readr)
 #library(easyCODA)
@@ -39,9 +40,6 @@ comm_pc = subset(comm_pc, select = -c(BGNN))
 comm_pc$BASP
 comm_pc$BCSP
 comm_pc$BACS = comm_pc$BACS + comm_pc$BCSP
-comm_pc$BHNU = 
-
-  
 #drop comm_pc$BCSP
 comm_pc = subset(comm_pc, select = -c(BCSP))
 
@@ -227,11 +225,13 @@ boot_occ(comm_aco, grp = comm_aco_sites)
 boot_occ(comm_pc, grp = comm_pc_sites)
 
 aco_boots <- replicate(1e3, boot_occ(comm_aco, grp = comm_aco_sites), simplify = FALSE)
-aco_sp_q <- apply(sapply(aco_boots, function(x) apply(x, 2, mean)), 1, quantile, c(0.025, 0.5, 0.975))
+aco_sp_q <- apply(sapply(aco_boots, function(x) apply(x, 2, mean)), 1,
+                  quantile, c(0.025, 0.5, 0.975))
 aco_sp_a <- apply(sapply(aco_boots, function(x) apply(x, 2, mean)), 1, mean)
 
 pc_boots<- replicate(1e3, boot_occ(comm_pc, grp = comm_pc_sites), simplify = FALSE)
-pc_sp_q <- apply(sapply(pc_boots, function(x) apply(x, 2, mean)), 1, quantile, c(0.025, 0.5, 0.975))
+pc_sp_q <- apply(sapply(pc_boots, function(x) apply(x, 2, mean)), 1,
+                 quantile, c(0.025, 0.5, 0.975))
 pc_sp_a <- apply(sapply(pc_boots, function(x) apply(x, 2, mean)), 1, mean)
 
 aco_sp_q
@@ -278,7 +278,7 @@ ggplot(tmp, aes(x = name, y = me)) +
   geom_errorbar(aes(ymin = lo, ymax = hi, col = method), width = 0.2) + 
   xlab('Species Code') + 
   ylab('Species Site Occupancy') +
-  scale_color_discrete(labels=c('Passive', 'Active')) +
+  scale_color_discrete(labels=c('Passive Acoustic', 'Point Count')) +
   theme_minimal()
 ggsave('./figs/species_occupancy_with_quantiles.pdf', width = 11.3, height = 6.15)
 
@@ -286,14 +286,14 @@ occ_sum_wide <- pivot_wider(occ_sum, names_from = method, values_from = c(occ, l
 names(occ_sum_wide)
 
 pdf('./figs/species_occupacny_one_to_one.pdf')
-plot(occ_sum_wide$`me_point count`, occ_sum_wide$me_passive, type='n',
-     xlab = 'Active Count Median Species Occupancy',
-     ylab = 'Passive Count Median Species Occupancy')
+plot(occ_sum_wide$me_ptct, occ_sum_wide$me_acoustic, type='n',
+     xlab = 'Point Count Median Species Occupancy',
+     ylab = 'Passive Acoustic Median Species Occupancy')
 abline(a = 0, b=1)
 with(occ_sum_wide, 
-     text(`me_point count`, me_passive, labels = name, col = 'grey', cex = 0.75))
+     text(me_ptct, me_acoustic, labels = name, col = 'grey', cex = 0.75))
 with(subset(occ_sum_wide, sig_diff == TRUE), 
-     text(`me_point count`, me_passive, labels = name, cex = 0.75))
+     text(me_ptct, me_acoustic, labels = name, cex = 0.75))
 dev.off()
 
 
@@ -333,7 +333,7 @@ replicate(100, points(boot_raw_S(comm_pc, comm_pc_sites),
      boot_raw_S(comm_aco, comm_aco_sites)))
 
 aco_div_boots <- replicate(1e3, boot_raw_S(comm_aco, comm_aco_sites))
-pc_div_boots <- replicate(1e3, boot_raw_S(comm_pc, comm_pc_sites))
+pc_div_boots <- replicate(1e3, boot_raw_S(comm_pc, comm_pc_sites)) ## getting an error here
 
 # quantiles of site level richness values
 aco_div_q <- apply(aco_div_boots, 1, quantile, c(0.025, 0.5, 0.975))
@@ -363,7 +363,7 @@ pc_div_q2
 #2.5%      50%    97.5% 
 #2.611111 2.930556 3.222222 
 
-# both bootsrap procedures are giving same take home message
+# both bootstrap procedures are giving same take home message
 # the richness is lower in the acoustic dataset at a 5 min interva
 
 # then repeat but using occupancy estimates
@@ -429,15 +429,18 @@ arrows(bp[2], pc_div_occ[1], bp[2], pc_div_occ[3],
 
 aco_boots[[1]][1:5, 1:10]
 
-calc_beta <- function(occ_comm) {
+calc_beta_occ <- function(occ_comm) {
   mean_sp_occs <- colMeans(occ_comm)
   gamma <- sum(mean_sp_occs > 0)
   1 / mean(mean_sp_occs)
 }
   
 
-aco_beta_q <- quantile(sapply(aco_boots, calc_beta), c(0.025, 0.5, 0.975))
-pc_beta_q <- quantile(sapply(pc_boots, calc_beta), c(0.025, 0.5, 0.975))
+aco_beta_q <- quantile(sapply(aco_boots, calc_beta_occ), c(0.025, 0.5, 0.975))
+pc_beta_q <- quantile(sapply(pc_boots, calc_beta_occ), c(0.025, 0.5, 0.975))
+
+
+
 
 pdf('./figs/whittakers_beta_comparison.pdf')
 bp <- barplot(c(aco_beta_q[2], pc_beta_q[2]), 
@@ -449,6 +452,59 @@ arrows(bp[1], aco_beta_q[1], bp[1], aco_beta_q[3],
        angle = 90, code =3, length = 0.2)
 arrows(bp[2], pc_beta_q[1], bp[2], pc_beta_q[3], 
        angle = 90, code =3, length = 0.2)
+dev.off()
+
+
+
+gg_color_hue <- function(n) {
+  hues = seq(15, 375, length = n + 1)
+  hcl(h = hues, l = 65, c = 100)[1:n]
+}
+
+cols <- gg_color_hue(4)
+
+
+pdf('./figs/sample_based_rarefaction.pdf')
+pc_sbr <- rarefaction(comm_pc, 'SBR', sd = TRUE)
+aco_sbr <- rarefaction(comm_aco, 'SBR', sd = TRUE)
+# would be nice to have a both curve
+
+plot(aco_sbr, xlab = '# of 5 min samples', ylab = 'Species richness', type = 'l', 
+     lwd = 2, col = cols[1])
+lines(pc_sbr, col=cols[3], lwd = 2)
+legend('bottomright', c('Passive Acoustic', 'Point Count'), lwd = 2, 
+       col = cols[c(1,3)], bty = 'n')
+dev.off()
+
+# load point count data only subsetting to wetlands
+# read in point count data
+dat_pc <- read.csv('https://raw.githubusercontent.com/mcglinnlab/wetland_birds/main/data/filtered_data/clean_bird_dat.csv')
+#note: in dat_pc from Jackson that wetland_id is equivalent to what I've called
+# site_id; therefore let's rename wetland_id to site_id for simplicity
+#jackson's data is subset from 0y-25 m rather than previous total which was 50m.
+head(dat_pc)
+comm_pc <- dat_pc[ , c('wetland_id', names(dat_pc)[12:66])]
+comm_pc[1:5, 1:5]
+#Bachman's sparrow code is incorrect in ptct data. Switch BASP to BACS
+colnames(comm_pc)[21] <- "BACS"
+comm_pc = subset(comm_pc, select = -c(BGNN))
+comm_pc$BASP
+comm_pc$BCSP
+comm_pc$BACS = comm_pc$BACS + comm_pc$BCSP
+#drop comm_pc$BCSP
+comm_pc = subset(comm_pc, select = -c(BCSP))
+# drop uplands
+comm_pc <- subset(comm_pc, !grepl('UP', comm_pc$wetland_id))
+
+pc_full_sbr <- rarefaction(comm_pc[ , -1], 'SBR')
+
+pdf('./figs/sample_based_rarefaction_with_additional_ptct.pdf')
+plot(aco_sbr, xlab = '# of 5 min samples', ylab = 'Species richness', type = 'l', 
+     lwd = 2, col = cols[1])
+lines(pc_sbr, col=cols[3], lwd = 2)
+lines(pc_full_sbr, col=cols[3], lwd = 2, lty = 2)
+legend('bottomright', c('Passive Acoustic', 'Point Count Matched', 'Point Count All'),
+       lwd = 2, lty = c(1,1,2),  col = cols[c(1,3)], bty = 'n')
 dev.off()
 
 
