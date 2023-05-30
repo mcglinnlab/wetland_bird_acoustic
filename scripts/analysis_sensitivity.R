@@ -150,12 +150,20 @@ head(occ_wide)
 
 cols <- rev(terrain.colors(10))
 
-plot(`1` ~ `0.1`, data = occ_wide, type = 'n')
+plot(`0.1` ~ `1`, data = occ_wide, type = 'n')
 abline(a=0, b=1)
 for(i in seq_along(confi_vals)) { 
   points(as.matrix(occ_wide_me[ , 11]), 
          as.matrix(occ_wide_me[ , i + 1]), col = cols[i+1], pch = 19)
 }
+
+par(mfrow=c(1,3))
+plot(`0.1` ~ `1`, data = occ_wide, type = 'p', ylim = c(0, 0.5))
+abline(a=0, b=1)
+plot(`0.5` ~ `1`, data = occ_wide, type = 'p', ylim = c(0, 0.5))
+abline(a=0, b=1)
+plot(`0.9` ~ `1`, data = occ_wide, type = 'p', ylim = c(0, 0.5))
+abline(a=0, b=1)
 
 # average alpha richness
 plot(c(confi_vals, 1), colSums(occ_wide[ , -1]), type = 'p', axes = FALSE, 
