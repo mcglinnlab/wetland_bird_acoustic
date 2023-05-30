@@ -40,29 +40,30 @@ dirs_int <- c("HH01","HH02", "HH04", "HH05", "HH14",
 dat <- data.frame()
 # loop through site ids
 for (j in seq_along(dirs_int)) {
-    print(paste(j, 'of', length(dirs_int)))
-    file_names <- dir(dirs_int[j], recursive = TRUE)
-    # isolate only csv file names from .wav files or others
-    csv_files <- file_names[grep('.csv', file_names)]
-    # loop through all files for a particular site
-    for (i in seq_along(csv_files)) {
-        tmp_file_name <- paste(dirs_int[j], csv_files[i], sep = '/')
-        tmp <-  read.csv(tmp_file_name)
-        if (nrow(tmp) > 0) {
-            date_of_sample <- extract_date(tmp_file_name)
-            time_of_day <- extract_time(tmp_file_name)
-            day_time <- paste(date_of_sample, time_of_day)
-            site_id <- extract_site_id(tmp_file_name)
-            tmp <- data.frame(site_id,
-                              date_time = day_time,
-                              date = date_of_sample,
-                              start_time = as.POSIXct(day_time, tz = 'EST', format = "%m/%d/%Y %H:%M") + tmp$Start..s.,
-                              end_time = as.POSIXct(day_time, tz = 'EST', format = "%m/%d/%Y %H:%M") + tmp$End..s.,
-                              tmp[ , -(1:2)])
-            dat <- rbind(dat, tmp)
-        }
-    }    
+  print(paste(j, 'of', length(dirs_int)))
+  file_names <- dir(dirs_int[j], recursive = TRUE)
+  # isolate only csv file names from .wav files or others
+  csv_files <- file_names[grep('.csv', file_names)]
+  # loop through all files for a particular site
+  for (i in seq_along(csv_files)) {
+    tmp_file_name <- paste(dirs_int[j], csv_files[i], sep = '/')
+    tmp <-  read.csv(tmp_file_name)
+    if (nrow(tmp) > 0) {
+      date_of_sample <- extract_date(tmp_file_name)
+      time_of_day <- extract_time(tmp_file_name)
+      day_time <- paste(date_of_sample, time_of_day)
+      site_id <- extract_site_id(tmp_file_name)
+      tmp <- data.frame(site_id,
+                        date_time = day_time,
+                        date = date_of_sample,
+                        start_time = as.POSIXct(day_time, tz = 'EST', format = "%Y-%m-%d %H:%M") + tmp$Start..s.,
+                        end_time = as.POSIXct(day_time, tz = 'EST', format = "%Y-%m-%d %H:%M") + tmp$End..s.,
+                        tmp[ , -(1:2)])
+      dat <- rbind(dat, tmp)
+    }
+  }    
 }
+
 
 dim(dat)
 head(dat)

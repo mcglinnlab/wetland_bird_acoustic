@@ -2,6 +2,12 @@
 # read in data and reformat -----------
 dat <- read.csv('./data/compiled_bird_audio_survey_master.csv')
 
+# fix upland sites names: 
+# UPred -> UP05
+# UPblue -> UP06
+dat$site_id[dat$site_id == "UPred"] <- "UP05"
+dat$site_id[dat$site_id == "UPblue"] <- "UP06"
+
 dat$site_time <- paste(dat$site_id, dat$date_time, sep ='_')
 
 hab <- ifelse(grepl('U', dat$site_id), 'upland', 'wetland')
@@ -20,107 +26,72 @@ head(acou_code)
 dat <- merge(dat, acou_code, by = "Scientific.name")
 head(dat)
 
-# subset any confidence less than 0.5
-dat_sub <- subset(dat, Confidence > 0.5)
-
 # format date fields properly
-dat_sub$date_time <- as.POSIXlt(dat_sub$date_time, tz = 'EST',
-                                format = "%m/%d/%Y %H:%M")
-dat_sub$start_time <-  as.POSIXlt(dat_sub$start_time, tz = 'EST',
+dat$date_time <- as.POSIXlt(dat$date_time, tz = 'EST',
+                            format = "%m/%d/%Y %H:%M")
+dat$start_time <-  as.POSIXlt(dat$start_time, tz = 'EST',
                                   format = "%m/%d/%Y %H:%M")
 
-# now adjust start times so that they are in 5 min intervals
-for (i in 1:nrow(dat_sub)) {
-    if ((dat_sub$start_time[i]  - dat_sub$date_time[i]) > 4) {
-        dat_sub$date_time[i] <- dat_sub$date_time[i] + 5*60
-    }
+# import the matrix of sampling times 
+pct_times <- read.csv('./data/raw_data - ptct_acoustic_sample_times.csv')
+pct_times$time <- with(pct_times, paste(date, time))
+pct_times$time <- as.POSIXlt(pct_times$time, tz = 'EST',
+                             format = "%m/%d/%Y %H:%M")
+pct_times$start_time <- as.POSIXlt(pct_times$start_time, tz = 'EST',
+                                   format = "%m/%d/%Y %H:%M")
+head(pct_times)
+
+# fix times 
+fix_time <- function(wrong_times, ref_time) {
+  first_wrong_time <- min(wrong_times)
+  time_deviation <- first_wrong_time - ref_time
+  corrected_times <- wrong_times - time_deviation
+  return(corrected_times)
 }
 
-# fix times of a few sites where clock was wrong
-# HH01 needs 4 hours subtracted
-dat_sub$start_time[dat_sub$site_id == "HH01"] <- dat_sub$start_time[dat_sub$site_id == "HH01"] - 4*60*60
-# HH02 needs 4 hours subtracted
-dat_sub$start_time[dat_sub$site_id == "HH02"] <- dat_sub$start_time[dat_sub$site_id == "HH02"] - 4*60*60
-# HH04 needs 4 hours subtracted
-dat_sub$start_time[dat_sub$site_id == "HH04"] <- dat_sub$start_time[dat_sub$site_id == "HH04"] - 4*60*60
-# HH05 needs 4 hours subtracted
-dat_sub$start_time[dat_sub$site_id == "HH05"] <- dat_sub$start_time[dat_sub$site_id == "HH05"] - 4*60*60
-#HH14 needs 4 hours subtracted
-dat_sub$start_time[dat_sub$site_id == "HH14"] <- dat_sub$start_time[dat_sub$site_id == "HH14"] - 4*60*60
-#HH17 needs 4 hours subtracted
-dat_sub$start_time[dat_sub$site_id == "HH17"] <- dat_sub$start_time[dat_sub$site_id == "HH17"] - 4*60*60
-#HH30 needs 4 hours subtracted
-dat_sub$start_time[dat_sub$site_id == "HH30"] <- dat_sub$start_time[dat_sub$site_id == "HH30"] - 4*60*60
-#HH31 needs 5 hours added (survey date 6/7)
-dat_sub$start_time[dat_sub$site_id == "HH31"] <- dat_sub$start_time[dat_sub$site_id == "HH31"] + 5*60*60
-#HH45 needs 4 hours subtracted
-dat_sub$start_time[dat_sub$site_id == "HH45"] <- dat_sub$start_time[dat_sub$site_id == "HH45"] - 4*60*60
-#HH46 needs 4 hours subtracted
-dat_sub$start_time[dat_sub$site_id == "HH46"] <- dat_sub$start_time[dat_sub$site_id == "HH46"] - 4*60*60
-#HH48 needs 4 hours subtracted
-dat_sub$start_time[dat_sub$site_id == "HH48"] <- dat_sub$start_time[dat_sub$site_id == "HH48"] - 4*60*60
-#SP01 needs 4 hours subtracted
-dat_sub$start_time[dat_sub$site_id == "SP01"] <- dat_sub$start_time[dat_sub$site_id == "SP01"] - 4*60*60
-# SP02 needs 4 hours added! (real date is 6/14/22)
-dat_sub$start_time[dat_sub$site_id == "SP02"] <- dat_sub$start_time[dat_sub$site_id == "SP02"] + 4*60*60
-#SP03 needs 4 hours subtracted
-dat_sub$start_time[dat_sub$site_id == "SP03"] <- dat_sub$start_time[dat_sub$site_id == "SP03"] - 4*60*60
-# SP09 needs 4 hours subtracted
-dat_sub$start_time[dat_sub$site_id == "SP09"] <- dat_sub$start_time[dat_sub$site_id == "SP09"] - 4*60*60
-#SP05 needs 4 hours subtracted
-dat_sub$start_time[dat_sub$site_id == "SP05"] <- dat_sub$start_time[dat_sub$site_id == "SP05"] - 4*60*60
-#UP04 needs 4 hours subtracted
-dat_sub$start_time[dat_sub$site_id == "UP04"] <- dat_sub$start_time[dat_sub$site_id == "UP04"] - 4*60*60
+site_ids <- unique(dat$site_id)
+sort(site_ids)
 
-#fix date time
-# HH01 needs 4 hours subtracted
-dat_sub$date_time[dat_sub$site_id == "HH01"] <- dat_sub$date_time[dat_sub$site_id == "HH01"] - 4*60*60
-# HH02 needs 4 hours subtracted
-dat_sub$date_time[dat_sub$site_id == "HH02"] <- dat_sub$date_time[dat_sub$site_id == "HH02"] - 4*60*60
-# HH04 needs 4 hours subtracted
-dat_sub$date_time[dat_sub$site_id == "HH04"] <- dat_sub$date_time[dat_sub$site_id == "HH04"] - 4*60*60
-# HH05 needs 4 hours subtracted
-dat_sub$date_time[dat_sub$site_id == "HH05"] <- dat_sub$date_time[dat_sub$site_id == "HH05"] - 4*60*60
-#HH14 needs 4 hours subtracted
-dat_sub$start_time[dat_sub$site_id == "HH14"] <- dat_sub$date_time[dat_sub$site_id == "HH14"] - 4*60*60
-#HH17 needs 4 hours subtracted
-dat_sub$start_time[dat_sub$site_id == "HH17"] <- dat_sub$date_time[dat_sub$site_id == "HH17"] - 4*60*60
-#HH30 needs 4 hours subtracted
-dat_sub$start_time[dat_sub$site_id == "HH30"] <- dat_sub$date_time[dat_sub$site_id == "HH30"] - 4*60*60
-#HH31 needs 5 hours added (survey date 6/7)
-dat_sub$start_time[dat_sub$site_id == "HH31"] <- dat_sub$date_time[dat_sub$site_id == "HH31"] + 5*60*60
-#HH45 needs 4 hours subtracted
-dat_sub$start_time[dat_sub$site_id == "HH45"] <- dat_sub$date_time[dat_sub$site_id == "HH45"] - 4*60*60
-#HH46 needs 4 hours subtracted
-dat_sub$start_time[dat_sub$site_id == "HH46"] <- dat_sub$date_time[dat_sub$site_id == "HH46"] - 4*60*60
-#HH48 needs 4 hours subtracted
-dat_sub$start_time[dat_sub$site_id == "HH48"] <- dat_sub$date_time[dat_sub$site_id == "HH48"] - 4*60*60
-#SP01 needs 4 hours subtracted
-dat_sub$start_time[dat_sub$site_id == "SP01"] <- dat_sub$date_time[dat_sub$site_id == "SP01"] - 4*60*60
-# SP02 needs 4 hours added (real date is 6/14/22)
-dat_sub$date_time[dat_sub$site_id == "SP02"] <- dat_sub$date_time[dat_sub$site_id == "SP02"] + 4*60*60
-# SP03 needs 4 hours subtracted
-dat_sub$date_time[dat_sub$site_id == "SP03"] <- dat_sub$date_time[dat_sub$site_id == "SP03"] - 4*60*60
-# SP09 needs 4 hours subtracted
-dat_sub$date_time[dat_sub$site_id == "SP09"] <- dat_sub$date_time[dat_sub$site_id == "SP09"] - 4*60*60
-#SP05 needs 4 hours subtracted
-dat_sub$start_time[dat_sub$site_id == "SP05"] <- dat_sub$date_time[dat_sub$site_id == "SP05"] - 4*60*60
-#UP04 needs 4 hours subtracted
-dat_sub$start_time[dat_sub$site_id == "UP04"] <- dat_sub$date_time[dat_sub$site_id == "UP04"] - 4*60*60
+# need to double check if SP08 and UP05 need time corrections
 
-# survey start time
-start_time <- as.POSIXlt(paste(dat_sub$date, "7:00"), tz = 'EST',
-                         format = "%m/%d/%Y %H:%M")
-# survey end time
-end_time <- as.POSIXlt(paste(dat_sub$date, "8:00"), tz = 'EST',
-                        format = "%m/%d/%Y %H:%M")
+for(i in seq_along(site_ids)) { 
+  if (site_ids[i] %in% c("SP01", "SP08", "SP09", "UP05")) {
+    # 4 hours subtracted
+    dat$start_time[dat$site_id == site_ids[i]] <- dat$start_time[dat$site_id == site_ids[i]] - 4*60*60
+    dat$date_time[dat$site_id == site_ids[i]] <- dat$date_time[dat$site_id == site_ids[i]] - 4*60*60
+  } else if (site_ids[i] == "SP02") {
+      # SP02 needs 4 hours added! (real date is 6/14/22)
+      dat$start_time[dat$site_id == "SP02"] <- dat$start_time[dat$site_id == "SP02"] + 4*60*60
+      dat$date_time[dat$site_id == "SP02"] <- dat$date_time[dat$site_id == "SP02"] + 4*60*60
+  } else { 
+     dat$start_time[dat$site_id == site_ids[i]] <- fix_time(dat$start_time[dat$site_id == site_ids[i]],
+                                                            pct_times$time[pct_times$wetland_id == site_ids[i]])
+     dat$date_time[dat$site_id == site_ids[i]] <- fix_time(dat$date_time[dat$site_id == site_ids[i]],
+                                                           pct_times$time[pct_times$wetland_id == site_ids[i]])
+   }
+}
 
-# subset dat_sub to dawn chorus times 
-dat_sub <- dat_sub[dat_sub$start_time > start_time & dat_sub$start_time < end_time, ]
+# survey start time 
+# must only reference time of day and not date
+
+start_hour <- 7
+end_hour <- 8
+
+rec_hours <- as.numeric(format(dat$start_time, format = "%H"))
+
+# subset dat to hours between the start_hour and end_hour
+dat <- dat[rec_hours >= start_hour & rec_hours < end_hour, ]
+
+# now adjust start times so that they are in 5 min intervals
+for (i in 1:nrow(dat)) {
+  if ((dat$start_time[i]  - dat$date_time[i]) > 4) {
+    dat$date_time[i] <- dat$date_time[i] + 5*60
+  }
+}
 
 # make unique id that has site_id and date_time
-dat_sub$site_date <- with(dat_sub, paste(site_id, date_time, sep = '_'))
-comm <- with(dat_sub, tapply(Confidence, list(site_date, sp_code),
+dat$site_date <- with(dat, paste(site_id, date_time, sep = '_'))
+comm <- with(dat, tapply(Confidence, list(site_date, sp_code),
                              function(x) any(x > 0) * 1))
 comm <- ifelse(is.na(comm), 0, comm)
 sum(comm)
@@ -142,4 +113,4 @@ sumcomm <- as.data.frame(sumcomm)
 #export data for analysis
 write.csv(sumcomm, file = "./data/clean_data/sumcomm.csv", row.names = FALSE)
 write.csv(comm, file = "./data/clean_data/comm.csv", row.names = FALSE)
-write.csv(dat_sub, file = "./data/clean_data/subset_data.csv", row.names = FALSE)
+write.csv(dat, file = "./data/clean_data/dat.csv", row.names = FALSE)

@@ -1,4 +1,5 @@
 library(dplyr)
+library(tidyr)
 
 # read in merlin data
 merlin <- read.csv('./data/raw_data - merlin_audio_year2.csv')
