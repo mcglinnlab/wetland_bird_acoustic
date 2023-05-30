@@ -98,8 +98,9 @@ for(i in seq_along(confi_vals)) {
   
   # drop upland sites
   #comm_aco <- subset(comm_aco, !grepl('UP', comm_aco_sites))
+  #comm_aco_sites <- substr(rownames(comm_aco), 1, 4)
+
   comm_aco <- as.data.frame(comm_aco)
-  comm_aco_sites <- substr(rownames(comm_aco), 1, 4)
   
   aco_boots <- replicate(nboots, boot_occ(comm_aco, grp = comm_aco_sites), simplify = FALSE)
   aco_sp_q <- apply(sapply(aco_boots, function(x) apply(x, 2, mean)), 1,
@@ -116,7 +117,7 @@ for(i in seq_along(confi_vals)) {
 
 }
 
-# run empirical results
+# run empirical results - these are given occ_confi of 100% or 1.
 # get ptct in correct format
 comm_pc <- subset(comm_pc, wetland_id %in% comm_aco_sites)
 comm_pc_sites <- comm_pc$wetland_id
@@ -132,19 +133,39 @@ occ_results <- rbind(occ_results,
                                occ_lo = pc_sp_q[1, ],
                                occ_me = pc_sp_q[2, ],
                                occ_hi = pc_sp_q[3, ], 
-                               occ_confi = NA))
-# now add to point count all species not detected with occupancy zero
-pc_sp_list <- occ_results$sp[is.na(occ_results$occ_confi)]
-sp_not_in_pc <- sort(unique(occ_results$sp[!(occ_results$sp %in% pc_sp_list)]))
-occ_results <- rbind(occ_results,
-                     data.frame(sp = sp_not_in_pc, occ_avg = 0,
-                                occ_lo = 0,
-                                occ_me = 0,
-                                occ_hi = 0,
-                                occ_confi = NA))
+                               occ_confi = 1))
 
 write.csv(occ_results, file = './results/occ_results.csv', row.names = FALSE)
 
 # need to restructure data to a wide format for plotting against 1:1
-with(occ_results, plot(occ_me[is.na(occ_confi)], occ_me[occ_confi == 0.1]))
+occ_wide_me <- pivot_wider(occ_results[ , c('sp','occ_me','occ_confi')], values_from = occ_avg,
+                        names_from = occ_confi, values_fill = 0)
+
+occ_wide_lo <- pivot_wider(occ_results[ , c('sp','occ_lo','occ_confi')], values_from = occ_avg,
+                        names_from = occ_confi, values_fill = 0)
+occ_wide_hi <- pivot_wider(occ_results[ , c('sp','occ_hi','occ_confi')], values_from = occ_avg,
+                           names_from = occ_confi, values_fill = 0)
+head(occ_wide)
+
+
+cols <- rev(terrain.colors(10))
+
+plot(`1` ~ `0.1`, data = occ_wide, type = 'n')
+abline(a=0, b=1)
+for(i in seq_along(confi_vals)) { 
+  points(as.matrix(occ_wide_me[ , 11]), 
+         as.matrix(occ_wide_me[ , i + 1]), col = cols[i+1], pch = 19)
+}
+
+# average alpha richness
+plot(c(confi_vals, 1), colSums(occ_wide[ , -1]), type = 'p', axes = FALSE, 
+     xlab = 'Confidence Value', ylab = 'Average Richness')
+axis(side = 1, labels = c(confi_vals, 'Human'), at = c(confi_vals, 1))
+axis(side = 2)
+# add error bars
+arrows()
+
+# gamma richness
+plot(c(confi_vals, 1),  colSums(occ_wide[ , -1] > 0), type = 'h')
+
 
