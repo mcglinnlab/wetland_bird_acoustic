@@ -138,17 +138,22 @@ occ_results <- rbind(occ_results,
 write.csv(occ_results, file = './results/occ_results.csv', row.names = FALSE)
 
 # need to restructure data to a wide format for plotting against 1:1
-occ_wide_me <- pivot_wider(occ_results[ , c('sp','occ_me','occ_confi')], values_from = occ_avg,
+occ_wide <- pivot_wider(occ_results[ , c('sp','occ_avg','occ_confi')], values_from = occ_avg,
                         names_from = occ_confi, values_fill = 0)
 
-occ_wide_lo <- pivot_wider(occ_results[ , c('sp','occ_lo','occ_confi')], values_from = occ_avg,
+occ_wide_me <- pivot_wider(occ_results[ , c('sp','occ_me','occ_confi')], values_from = occ_me,
                         names_from = occ_confi, values_fill = 0)
-occ_wide_hi <- pivot_wider(occ_results[ , c('sp','occ_hi','occ_confi')], values_from = occ_avg,
+
+occ_wide_lo <- pivot_wider(occ_results[ , c('sp','occ_lo','occ_confi')], values_from = occ_lo,
+                        names_from = occ_confi, values_fill = 0)
+occ_wide_hi <- pivot_wider(occ_results[ , c('sp','occ_hi','occ_confi')], values_from = occ_hi,
                            names_from = occ_confi, values_fill = 0)
 head(occ_wide)
 
 
 cols <- rev(terrain.colors(10))
+
+confi_vals <- seq(0.1, 0.9, 0.1)
 
 plot(`0.1` ~ `1`, data = occ_wide, type = 'n')
 abline(a=0, b=1)
